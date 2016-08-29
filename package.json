@@ -1,0 +1,22 @@
+{
+  "name": "koovdev_action",
+  "version": "1.0.0",
+  "description": "firmata action management",
+  "main": "koovdev_action.js",
+  "scripts": {
+    "test": "./node_modules/.bin/istanbul cover ./node_modules/.bin/_mocha -- --recursive -R spec -r should",
+    "posttest": "./node_modules/.bin/istanbul check-coverage && rm -rf coverage"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "debug": "latest",
+    "firmata": "git+ssh://git@bitbucket.org/sonyged/firmata.js.git#koov"
+  },
+  "devDependencies": {
+    "nodeunit": "latest",
+    "mocha": "latest",
+    "istanbul": "latest",
+    "should": "latest"
+  }
+}
