@@ -2,7 +2,7 @@
  */
 
 'use strict';
-const debug = require('debug')('koovdev_action');
+let debug = require('debug')('koovdev_action');
 
 const clamp = (min, max, value) => {
   return Math.max(min, Math.min(max, value));
@@ -267,10 +267,29 @@ function koov_actions(board) {
   };
 
   return {
+    action_queue: [],
+    current_action: null,
     action: function(block, arg, cb) {
-      if (this[block.name])
-        return this[block.name](block, arg, cb);
-      cb(`no such block ${block.name}`);
+      const finish = (err) => {
+        if (this.current_action === null)
+          return;
+        const { block: block, arg: arg, cb: cb } = this.current_action;
+        setTimeout(() => { this.current_action = null; return exec(); }, 0);
+        return cb(err);
+      };
+      const exec = () => {
+        if (this.current_action !== null ||
+            this.action_queue.length === 0)
+          return;
+
+        this.current_action = this.action_queue.pop();
+        const { block: block, arg: arg, cb: cb } = this.current_action;
+        if (this[block.name])
+          return this[block.name](block, arg, finish);
+        finish(`no such block ${block.name}`);
+      };
+      this.action_queue.push({ block: block, arg: arg, cb: cb });
+      return exec();
     },
     // callbacks by pin number.
     callback: {
@@ -522,6 +541,7 @@ function koov_actions(board) {
 };
 
 const open_firmata = (action, cb, opts) => {
+  debug('firmata open');
   let called = false;
   const callback = (err) => {
     if (called)
@@ -531,7 +551,19 @@ const open_firmata = (action, cb, opts) => {
   };
   setTimeout(() => { return callback('failed to open firmata'); }, 10000);
   const firmata = require('firmata');
-  const board = new firmata.Board(action.serial, opts, (err) => {
+  const transport = {
+    write: (data) => {
+      return action.serial.serial_write(data, (err) => {
+        debug('transport: write', err);
+      });
+    },
+    on: (what, cb) => {
+      return action.serial.serial_event(what, (err) => {
+        debug('transport: on', err);
+      }, cb);
+    }
+  };
+  const board = new firmata.Board(transport, opts, (err) => {
     debug('firmata open', err);
     if (err)
       return callback(err);
@@ -560,19 +592,22 @@ function Action(opts)
   this.board = null;
   this.action = null;
   this.keepAliveId = null;
-  this.serial = null;
+  this.serial = opts.serial;
   if (opts.debug)
     debug = opts.debug;
-  this.open = function(serial, cb) {
-    if (this.serial)
-      return cb('action: already open');
-    if (!serial)
-      return cb('action: serial is null');
-    this.serial = serial;
-    return open_firmata(this, cb, {
-      reportVersionTimeout: 0,
-      //reportVersionTimeout: 5000,
-      //samplingInterval: 10000
+  this.open = function(name, cb) {
+    debug('action: open', name);
+    if (!this.serial)
+      return cb('action: no serial');
+    this.serial.open(name, (err) => {
+      debug('action: serial: open', err);
+      if (err)
+        return cb(err);
+      return open_firmata(this, cb, {
+        reportVersionTimeout: 0,
+        //reportVersionTimeout: 5000,
+        //samplingInterval: 10000
+      });
     });
   };
   this.close = function(cb) {
@@ -582,8 +617,7 @@ function Action(opts)
       clearTimeout(this.keepAliveId);
       this.keepAliveId = null;
     }
-    this.serial = null;
-    return cb(null);
+    return this.serial.close(cb);
   };
 };
 
