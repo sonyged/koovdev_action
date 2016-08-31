@@ -554,12 +554,12 @@ const open_firmata = (action, cb, opts) => {
   const transport = {
     write: (data) => {
       return action.serial.serial_write(data, (err) => {
-        debug('transport: write', err);
+        //debug('transport: write', err);
       });
     },
     on: (what, cb) => {
       return action.serial.serial_event(what, (err) => {
-        debug('transport: on', err);
+        //debug('transport: on', err);
       }, cb);
     }
   };
@@ -575,7 +575,7 @@ const open_firmata = (action, cb, opts) => {
           return;
         }
         board.reportVersion(() => {
-          debug('keep_alive: version reported');
+          //debug('keep_alive: version reported');
           keep_alive();
         });
       }, 5 * 1000);
