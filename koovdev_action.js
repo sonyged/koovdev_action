@@ -300,6 +300,7 @@ function koov_actions(board) {
     'port-settings': function(block, arg, cb) {
       const port_settings = block['port-settings'];
       debug('port-settings', port_settings);
+      board.reset();
       // Removing this if guard prevented servo motor from initializing.
       if (port_settings['RGB'] || true) {
         debug(`setting multi-led`);
