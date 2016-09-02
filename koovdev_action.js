@@ -90,6 +90,7 @@ function turn_fet(board, pin, on) {
 /*
  * DC Motor state management.
  */
+const analogMax = 255;
 let DCMOTOR_STATE = [
   { port: 'V0', power: 0, mode: 'COAST' },
   { port: 'V1', power: 0, mode: 'COAST' }
@@ -101,7 +102,7 @@ const DCMOTOR_MODE = {
   },
   REVERSE: (board, pins, power) => {
     board.digitalWrite(pins[1], board.HIGH);
-    board.analogWrite(pins[0], 1023 - power);
+    board.analogWrite(pins[0], analogMax - power);
   },
   COAST: (board, pins, power) => {
     board.digitalWrite(pins[1], board.LOW);
@@ -109,7 +110,7 @@ const DCMOTOR_MODE = {
   },
   BRAKE: (board, pins, power) => {
     board.digitalWrite(pins[1], board.HIGH);
-    board.analogWrite(pins[0], 1023);
+    board.analogWrite(pins[0], analogMax);
   }
 };
 
@@ -123,6 +124,8 @@ function dcmotor_control(board, port, power, mode) {
     var pins = KOOV_PORTS[port];
     if (power !== null)
       dm.power = power;
+    if (mode === 'BREAK')
+      mode = 'BRAKE';
     if (mode !== null)
       dm.mode = mode;
     DCMOTOR_MODE[dm.mode](board, pins, dm.power);
@@ -130,7 +133,7 @@ function dcmotor_control(board, port, power, mode) {
 }
 function dcmotor_power(board, port, power) {
   power = clamp(0, 100, power);
-  power = Math.floor(power * 1023 / 100);
+  power = Math.floor(power * analogMax / 100);
   dcmotor_control(board, port, power, null);
 }
 function dcmotor_mode(board, port, mode) {
