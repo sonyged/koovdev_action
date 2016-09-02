@@ -124,8 +124,6 @@ function dcmotor_control(board, port, power, mode) {
     var pins = KOOV_PORTS[port];
     if (power !== null)
       dm.power = power;
-    if (mode === 'BREAK')
-      mode = 'BRAKE';
     if (mode !== null)
       dm.mode = mode;
     DCMOTOR_MODE[dm.mode](board, pins, dm.power);
@@ -204,7 +202,7 @@ function koov_actions(board) {
   let noreply = action => {
     return (block, arg, cb) => {
       action(block, arg);
-      cb();
+      cb(null);
     };
   };
 
@@ -287,8 +285,14 @@ function koov_actions(board) {
 
         this.current_action = this.action_queue.pop();
         const { block: block, arg: arg, cb: cb } = this.current_action;
-        if (this[block.name])
-          return this[block.name](block, arg, finish);
+        if (this[block.name]) {
+          try {
+            return this[block.name](block, arg, finish);
+          } catch (e) {
+            debug('exception', e);
+            finish(e);
+          }
+        }
         finish(`no such block ${block.name}`);
       };
       this.action_queue.push({ block: block, arg: arg, cb: cb });
