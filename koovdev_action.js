@@ -553,12 +553,14 @@ const open_firmata = (action, cb, opts) => {
   const firmata = require('firmata');
   const transport = {
     write: (data) => {
-      return action.serial.serial_write(data, (err) => {
+      //debug('transport: write', data);
+      return action.device.serial_write(data, (err) => {
         //debug('transport: write', err);
       });
     },
     on: (what, cb) => {
-      return action.serial.serial_event(what, (err) => {
+      //debug('transport: on', what);
+      return action.device.serial_event(what, (err) => {
         //debug('transport: on', err);
       }, cb);
     }
@@ -569,7 +571,7 @@ const open_firmata = (action, cb, opts) => {
       return callback(err);
     const keep_alive = () => {
       action.keepAliveId = setTimeout(() => {
-        if (!action.serial) {
+        if (!action.device) {
           debug('keep_alive: stop');
           action.keepAliveId = null;
           return;
@@ -592,14 +594,14 @@ function Action(opts)
   this.board = null;
   this.action = null;
   this.keepAliveId = null;
-  this.serial = opts.serial;
+  this.device = opts.device;
   if (opts.debug)
     debug = opts.debug;
   this.open = function(name, cb) {
     debug('action: open', name);
-    if (!this.serial)
+    if (!this.device)
       return cb('action: no serial');
-    this.serial.open(name, (err) => {
+    this.device.open(name, (err) => {
       debug('action: serial: open', err);
       if (err)
         return cb(err);
@@ -617,7 +619,7 @@ function Action(opts)
       clearTimeout(this.keepAliveId);
       this.keepAliveId = null;
     }
-    return this.serial.close(cb);
+    return this.device.close(cb);
   };
 };
 
