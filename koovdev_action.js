@@ -584,6 +584,14 @@ function koov_actions(board) {
         }
       });
     },
+    'firmata-version': function(block, arg, cb) {
+      debug('firmata-version', arg);
+      cb({ error: null, version: board.firmware.version });
+    },
+    'firmata-name': function(block, arg, cb) {
+      debug('firmata-name', arg);
+      cb({ error: null, name: board.firmware.name });
+    }
   };
 };
 

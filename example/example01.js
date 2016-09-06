@@ -70,6 +70,20 @@ async.waterfall([
     koovdev_action.open(usb, done);
   },
   (done) => {
+    console.log(`issue firmata-version`);
+    koovdev_action.action.action({ name: 'firmata-version' }, null, (v) => {
+      console.log(`firmata-version`, v);
+      done(v.error);
+    });
+  },
+  (done) => {
+    console.log(`issue firmata-name`);
+    koovdev_action.action.action({ name: 'firmata-name' }, null, (v) => {
+      console.log(`firmata-version`, v);
+      done(v.error);
+    });
+  },
+  (done) => {
     console.log(`issue bts01-reset`);
     koovdev_action.action.action({ name: 'bts01-reset' }, null, done);
   },
