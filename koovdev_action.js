@@ -8,6 +8,9 @@ const clamp = (min, max, value) => {
   return Math.max(min, Math.min(max, value));
 };
 
+const START_SYSEX = 0xF0;
+const END_SYSEX = 0xF7;
+
 /*
  * Pre-defined device actions.
  */
@@ -290,10 +293,10 @@ function koov_actions(board) {
             return this[block.name](block, arg, finish);
           } catch (e) {
             debug('exception', e);
-            finish(e);
+            return finish(e);
           }
         }
-        finish(`no such block ${block.name}`);
+        return finish(`no such block ${block.name}`);
       };
       this.action_queue.push({ block: block, arg: arg, cb: cb });
       return exec();
@@ -302,7 +305,8 @@ function koov_actions(board) {
     callback: {
       'analog-read': {},
       'digital-read': {},
-      'accelerometer-read': null
+      'accelerometer-read': null,
+      'bts01-cmd': null
     },
     'port-settings': function(block, arg, cb) {
       const port_settings = block['port-settings'];
@@ -357,6 +361,13 @@ function koov_actions(board) {
           callback(v);
         }
       });
+      board.addListener('bts01-cmd', v => {
+        var callback = this.callback['bts01-cmd'];
+        debug('bts01-cmd', v);
+        if (callback) {
+          callback(v);
+        }
+      });
       cb();
     },
     'turn-led': noreply(block => {
@@ -401,8 +412,6 @@ function koov_actions(board) {
     'buzzer-on': noreply(block => {
       const pin = KOOV_PORTS[block.port];
       if (typeof pin === 'number') {
-        const START_SYSEX = 0xF0;
-        const END_SYSEX = 0xF7;
         debug(`buzzer-on: pin: ${pin} freq ${block.frequency}`);
         board.transport.write(new Buffer([
           START_SYSEX, 0x0f, pin, 1, block.frequency, END_SYSEX
@@ -412,8 +421,6 @@ function koov_actions(board) {
     'buzzer-off': noreply(block => {
       const pin = KOOV_PORTS[block.port];
       if (typeof pin === 'number') {
-        const START_SYSEX = 0xF0;
-        const END_SYSEX = 0xF7;
         debug(`buzzer-off: pin: ${pin}`);
         board.transport.write(new Buffer([
           START_SYSEX, 0x0f, pin, 0, 0, END_SYSEX
@@ -534,8 +541,6 @@ function koov_actions(board) {
           debug(`${type}: port: ${port} value: ${value} (${v.value})`);
           cb(value);
         };
-        const START_SYSEX = 0xF0;
-        const END_SYSEX = 0xF7;
         const direction =
               block.direction === 'x' ? 0x01 :
               block.direction === 'y' ? 0x02 : 0x03;
@@ -544,7 +549,41 @@ function koov_actions(board) {
         ]));
       } else
         cb(0);
-    }
+    },
+    'bts01-reset': function(block, arg, cb) {
+      board.transport.write(new Buffer([
+        START_SYSEX, 0x0e, 0x02, 0x01, END_SYSEX
+      ]), (err) => {
+        debug('board.transport.write callback: bts01-reset:', err);
+        cb(null);
+      });
+    },
+    'bts01-cmd': function(block, arg, cb) {
+      debug('bts01-cmd', arg);
+      const timeout = arg.timeout || 1000;
+      const cmd = Buffer.concat([
+        new Buffer([
+          START_SYSEX, 0x0e, 0x02, 0x02,
+          (timeout >> 7) & 0x7f, timeout & 0x7f
+        ]),
+        new Buffer(arg.command),
+        new Buffer([END_SYSEX])
+      ]);
+      const type = 'bts01-cmd';
+      this.callback[type] = v => {
+        this.callback[type] = null;
+        debug(`${type}:`, v);
+        v.error = null;
+        cb(v);
+      };
+      board.transport.write(cmd, (err) => {
+        debug('board.transport.write callback: bts01-cmd:', err);
+        if (err) {
+          this.callback[type] = null;
+          cb({ error: err });
+        }
+      });
+    },
   };
 };
 
@@ -560,10 +599,12 @@ const open_firmata = (action, cb, opts) => {
   setTimeout(() => { return callback('failed to open firmata'); }, 10000);
   const firmata = require('firmata');
   const transport = {
-    write: (data) => {
+    write: (data, cb) => {
       //debug('transport: write', data);
       return action.device.serial_write(data, (err) => {
         //debug('transport: write', err);
+        if (cb)
+          return cb(err);
       });
     },
     on: (what, cb) => {

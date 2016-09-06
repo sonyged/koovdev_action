@@ -1,6 +1,6 @@
 {
   "name": "koovdev_action",
-  "version": "1.0.32",
+  "version": "1.0.34",
   "description": "firmata action management",
   "main": "koovdev_action.js",
   "scripts": {
@@ -14,9 +14,11 @@
     "firmata": "git+ssh://git@bitbucket.org/sonyged/firmata.js.git#koov"
   },
   "devDependencies": {
-    "nodeunit": "latest",
-    "mocha": "latest",
+    "async": "^2.0.1",
     "istanbul": "latest",
+    "koovdev_device": "file:///Users/enami/Work/make/app/modules/koovdev_device",
+    "mocha": "latest",
+    "nodeunit": "latest",
     "should": "latest"
   }
 }
