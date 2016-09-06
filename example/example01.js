@@ -33,13 +33,21 @@ let server = device_proxy.server({
 
 const build_cmd = (cmd) => {
   return (done) => {
-    console.log(`issue 'bts01-cmd'`);
+    console.log(`bts01-cmd: ${cmd}`);
     koovdev_action.action.action({ name: 'bts01-cmd' }, {
       timeout: 1000,
       command: cmd
     }, (v) => {
-      console.log(`issue 'bts01-cmd' => `, v.error);
-      console.log(new Buffer(v.buffer).toString());
+      console.log(`error => `, v.error);
+      if (!v.error) {
+        const s = new Buffer(v.buffer).toString();
+        // console.log(s);
+        console.log(s.split(/[\r\n]/).reduce((acc, x) => {
+          if (x.length > 0)
+            acc.push(x);
+          return acc;
+        }, []).reverse());
+      }
       done();
     });
   };

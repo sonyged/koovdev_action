@@ -1,6 +1,6 @@
 {
   "name": "koovdev_action",
-  "version": "1.0.34",
+  "version": "1.0.36",
   "description": "firmata action management",
   "main": "koovdev_action.js",
   "scripts": {
@@ -16,7 +16,7 @@
   "devDependencies": {
     "async": "^2.0.1",
     "istanbul": "latest",
-    "koovdev_device": "file:///Users/enami/Work/make/app/modules/koovdev_device",
+    "koovdev_device": "file://../../../../app/modules/koovdev_device",
     "mocha": "latest",
     "nodeunit": "latest",
     "should": "latest"
