@@ -163,6 +163,23 @@ const servoRead = (board, pin) => {
 };
 
 /*
+* Buzzer operations.
+ */
+const buzzer_on = (board, pin, frequency) => {
+  debug(`buzzer-on: pin: ${pin} freq ${frequency}`);
+  board.transport.write(new Buffer([
+    START_SYSEX, 0x0f, pin, 1, frequency, END_SYSEX
+  ]));
+};
+
+const buzzer_off = (board, pin) => {
+  debug(`buzzer-off: pin: ${pin}`);
+  board.transport.write(new Buffer([
+    START_SYSEX, 0x0f, pin, 0, 0, END_SYSEX
+  ]));
+};
+
+/*
  * Generate action dispatch table for KOOV.
  */
 function koov_actions(board) {
@@ -254,6 +271,10 @@ function koov_actions(board) {
     debug(`init_accel: port ${port}`);
     // XXX not yet implemented.
   };
+  const init_buzzer = port => {
+    const pin = KOOV_PORTS[port];
+    buzzer_off(board, pin);
+  };
   const initializer = {
     'output': low_output,
     'input': init_input,
@@ -261,7 +282,7 @@ function koov_actions(board) {
     'led': low_output,
     'dc-motor': init_dcmotor,
     'servo-motor': init_servo,
-    'buzzer': init_output,
+    'buzzer': init_buzzer,
     'light-sensor': init_sensor,
     'touch-sensor': init_sensor,
     'sound-sensor': init_sensor,
@@ -412,19 +433,13 @@ function koov_actions(board) {
     'buzzer-on': noreply(block => {
       const pin = KOOV_PORTS[block.port];
       if (typeof pin === 'number') {
-        debug(`buzzer-on: pin: ${pin} freq ${block.frequency}`);
-        board.transport.write(new Buffer([
-          START_SYSEX, 0x0f, pin, 1, block.frequency, END_SYSEX
-        ]));
+        buzzer_on(board, pin, block.frequency);
       }
     }),
     'buzzer-off': noreply(block => {
       const pin = KOOV_PORTS[block.port];
       if (typeof pin === 'number') {
-        debug(`buzzer-off: pin: ${pin}`);
-        board.transport.write(new Buffer([
-          START_SYSEX, 0x0f, pin, 0, 0, END_SYSEX
-        ]));
+        buzzer_off(board, pin);
       }
     }),
     'servomotor-synchronized-motion': (block, arg, cb) => {
