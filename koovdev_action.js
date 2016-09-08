@@ -599,6 +599,18 @@ function koov_actions(board) {
         }
       });
     },
+    'koov-reset': function(block, arg, cb) {
+      debug('koov-reset', arg);
+      const ticks = arg.ticks || 1000;
+      board.transport.write(new Buffer([
+        START_SYSEX, 0x0e, 0x02, 0x03,
+        (ticks >> 7) & 0x7f, ticks & 0x7f,
+        END_SYSEX
+      ]), (err) => {
+        debug('board.transport.write callback: koov-reset:', err);
+        cb(null);
+      });
+    },
     'firmata-version': function(block, arg, cb) {
       debug('firmata-version', arg);
       cb({ error: null, version: board.firmware.version });

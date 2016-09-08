@@ -1,6 +1,6 @@
 {
   "name": "koovdev_action",
-  "version": "1.0.40",
+  "version": "1.0.42",
   "description": "firmata action management",
   "main": "koovdev_action.js",
   "scripts": {
@@ -15,8 +15,9 @@
   },
   "devDependencies": {
     "async": "^2.0.1",
+    "device_proxy": "file:..//device_proxy",
     "istanbul": "latest",
-    "koovdev_device": "file://../../../../app/modules/koovdev_device",
+    "koovdev_device": "file:../../../../app/modules/koovdev_device",
     "mocha": "latest",
     "nodeunit": "latest",
     "should": "latest"
