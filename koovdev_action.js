@@ -201,12 +201,14 @@ function koov_actions(board) {
           this.callback[type][pin] = null;
           const value = scaler(v.value);
           debug(`${type}: pin: ${pin}/${v.pin} value: ${value} (${v.value})`);
-          cb(value);
+          cb({ error: false, value: value });
         };
         initializer(pin);
         enabler(pin, 1);
-      } else
-        cb(0);
+      } else {
+        debug(`${type}: pin is not number`, pin, block);
+        cb({ error: true, msg: `${type}: pin is not number`, value: 0 });
+      }
     };
   };
   var analog_reporter = (initializer) => {
@@ -222,6 +224,7 @@ function koov_actions(board) {
   let noreply = action => {
     return (block, arg, cb) => {
       action(block, arg);
+      //debug(`${block.name}: call callback`);
       cb(null);
     };
   };
@@ -293,14 +296,37 @@ function koov_actions(board) {
 
   return {
     action_queue: [],
+    action_id: 0,
     current_action: null,
+    resetting: false,
+    reset: function() {
+      debug('reset:', this.current_action);
+      this.resetting = true;
+      if (this.current_action) {
+        const { block: block, arg: arg, finish: finish } = this.current_action;
+        debug('call finish: resetting');
+        return finish({ msg: 'action terminated'});
+      }
+    },
     action: function(block, arg, cb) {
-      const finish = (err) => {
-        if (this.current_action === null)
-          return;
-        const { block: block, arg: arg, cb: cb } = this.current_action;
-        setTimeout(() => { this.current_action = null; return exec(); }, 0);
-        return cb(err);
+      const push_action = (block, arg, cb) => {
+        const id = this.action_id++;
+        const finish = (err) => {
+          if (this.current_action === null)
+            return;
+          // try { let a = {}; a.debug(); } catch (ex) { debug(ex.stack); }
+          // debug('finish: id', this.current_action.id, id);
+          if (this.current_action.id != id) {
+            debug('finish: id mismatch', this.current_action.id, id);
+            debug('finish: expect', e);
+            debug('finish: current', this.current_action);
+            return;
+          }
+          setImmediate(() => { this.current_action = null; return exec(); });
+          return cb(err);
+        };
+        const e = { block: block, arg: arg, finish: finish, id: id };
+        this.action_queue.push(e);
       };
       const exec = () => {
         if (this.current_action !== null ||
@@ -308,18 +334,27 @@ function koov_actions(board) {
           return;
 
         this.current_action = this.action_queue.pop();
-        const { block: block, arg: arg, cb: cb } = this.current_action;
+        const { block: block, arg: arg, finish: finish } = this.current_action;
+        if (this.resetting) {
+          debug('call finish: resetting');
+          return finish({ msg: 'action terminated'});
+        }
+
         if (this[block.name]) {
           try {
-            return this[block.name](block, arg, finish);
+            return this[block.name](block, arg, (err) => {
+              //debug('call finish: block callback', err, block);
+              return finish(err);
+            });
           } catch (e) {
-            debug('exception', e);
+            debug('call finish: exception', e);
             return finish(e);
           }
         }
-        return finish(`no such block ${block.name}`);
+        debug('call finish: no such block');
+        return finish({ msg: `no such block ${block.name}`});
       };
-      this.action_queue.push({ block: block, arg: arg, cb: cb });
+      push_action(block, arg, cb);
       return exec();
     },
     // callbacks by pin number.
@@ -629,9 +664,12 @@ const open_firmata = (action, cb, opts) => {
     if (called)
       return;
     called = true;
+    clearTimeout(timeoutId);
     return cb(err);
   };
-  setTimeout(() => { return callback('failed to open firmata'); }, 10000);
+  const timeoutId = setTimeout(() => {
+    return callback('failed to open firmata');
+  }, 10000);
   const firmata = require('firmata');
   const transport = {
     write: (data, cb) => {
@@ -681,6 +719,30 @@ function Action(opts)
   this.device = opts.device;
   if (opts.debug)
     debug = opts.debug;
+  const termiate_device = () => {
+    if (!this.device)
+      return;
+    debug('terminating device');
+    this.device.terminate(() => {
+      this.close((err) => {
+        debug('action: disconnected: close completed', err);
+      });
+    });
+  };
+  const on_disconnect = () => {
+    debug('action: disconnected', this.device);
+    termiate_device();
+  };
+  const on_error = (err) => {
+    debug('action: error', err);
+    if (err)
+      termiate_device();
+  };
+  const on_close = (err) => {
+    debug('action: close', err);
+    if (err)
+      termiate_device();
+  };
   this.open = function(name, cb) {
     debug('action: open', name);
     if (!this.device)
@@ -689,7 +751,14 @@ function Action(opts)
       debug('action: serial: open', err);
       if (err)
         return cb(err);
-      return open_firmata(this, cb, {
+      return open_firmata(this, (err) => {
+        if (err)
+          return cb(err);
+        this.board.on('disconnect', on_disconnect);
+        this.board.on('error', on_error);
+        this.board.on('close', on_close);
+        return cb(null);
+      }, {
         reportVersionTimeout: 0,
         //reportVersionTimeout: 5000,
         //samplingInterval: 10000
@@ -703,6 +772,8 @@ function Action(opts)
       clearTimeout(this.keepAliveId);
       this.keepAliveId = null;
     }
+    if (this.action)
+      this.action.reset();
     return this.device.close(cb);
   };
 };

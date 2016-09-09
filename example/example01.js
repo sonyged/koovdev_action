@@ -91,7 +91,21 @@ async.waterfall([
   build_cmd('AT+RVN\r'),
   build_cmd('AT+RBA\r'),
   build_cmd('AT+RBI\r'),
+  build_cmd('AT+CCP\r'),
+/**/
+  build_cmd('AT+CCP=0007,0007,0001,0190\r'),
+  build_cmd('AT+CCP\r'),
+/**/
   build_cmd('AT+SBO\r'),
+  (done) => {
+/*
+    console.log(`issue koov-reset`);
+    koovdev_action.action.action({ name: 'koov-reset' }, {
+      ticks: 5000
+    }, done);
+*/
+    done();
+  },
   (done) => {
     setTimeout(() => {
       koovdev_action.close((err) => {
