@@ -589,7 +589,7 @@ function koov_actions(board) {
           this.callback[type] = null;
           const value = v.value;
           debug(`${type}: port: ${port} value: ${value} (${v.value})`);
-          cb(value);
+          cb({ error: false, value: value });
         };
         const direction =
               block.direction === 'x' ? 0x01 :
@@ -598,7 +598,7 @@ function koov_actions(board) {
           START_SYSEX, 0x0e, 0x01, direction, END_SYSEX
         ]));
       } else
-        cb(0);
+        cb({ error: true, msg: `${type}: unknown port ${port}`, value: 0 });
     },
     'bts01-reset': function(block, arg, cb) {
       board.transport.write(new Buffer([
