@@ -4,6 +4,44 @@
 'use strict';
 let debug = require('debug')('koovdev_action');
 
+const KOOVDEV_ACTION_ERROR = 0xfb;
+
+const ACTION_NO_ERROR = 0x00;
+const ACTION_TERMINATED = 0x01;
+const ACTION_EXCEPTION = 0x02;
+const ACTION_UNKNOWN_BLOCK = 0x03;
+const ACTION_UNKNOWN_PORT = 0x04;
+const ACTION_BTS01CMD_FAILURE = 0x05;
+const ACTION_OPEN_FIRMATA_TIMEDOUT = 0x06;
+const ACTION_OPEN_FIRMATA_FAILURE = 0x07;
+const ACTION_WRITE_ERROR = 0x08;
+const ACTION_NO_DEVICE = 0x09;
+
+const error_p = (err) => {
+  if (!err)
+    return false;
+  if (typeof err === 'object')
+    return !!err.error;
+  return true;
+};
+
+const make_error = (tag, err) => {
+  if (tag === ACTION_NO_ERROR)
+    return err;
+  if (typeof err === 'string')
+    err = { msg: err };
+  if (typeof err !== 'object')
+    err = { msg: 'unknown error', original_error: err };
+  err.error = true;
+  if (!err.error_code)
+    err.error_code = ((KOOVDEV_ACTION_ERROR << 8) | tag) & 0xffff;
+  return err;
+};
+
+const error = (tag, err, cb) => {
+  return cb(make_error(tag, err));
+};
+
 const clamp = (min, max, value) => {
   return Math.max(min, Math.min(max, value));
 };
@@ -194,20 +232,23 @@ function koov_actions(board) {
   };
   var reporter = (type, enabler, initializer, scaler) => {
     return function(block, arg, cb) {
-      var pin = KOOV_PORTS[block.port];
+      const port = block.port;
+      const pin = KOOV_PORTS[port];
       if (typeof pin === 'number') {
         this.callback[type][pin] = v => {
           enabler(v.pin, 0);
           this.callback[type][pin] = null;
           const value = scaler(v.value);
           debug(`${type}: pin: ${pin}/${v.pin} value: ${value} (${v.value})`);
-          cb({ error: false, value: value });
+          return error(ACTION_NO_ERROR, { error: false, value: value }, cb);
         };
         initializer(pin);
         enabler(pin, 1);
       } else {
         debug(`${type}: pin is not number`, pin, block);
-        cb({ error: true, msg: `${type}: pin is not number`, value: 0 });
+        return error(ACTION_UNKNOWN_PORT, {
+          msg: `${type}: ${port}: pin is not number`, value: 0
+        }, cb);
       }
     };
   };
@@ -225,7 +266,7 @@ function koov_actions(board) {
     return (block, arg, cb) => {
       action(block, arg);
       //debug(`${block.name}: call callback`);
-      cb(null);
+      return error(ACTION_NO_ERROR, null, cb);
     };
   };
 
@@ -303,9 +344,11 @@ function koov_actions(board) {
       debug('reset:', this.current_action);
       this.resetting = true;
       if (this.current_action) {
-        const { block: block, arg: arg, finish: finish } = this.current_action;
+        const { block, arg, finish } = this.current_action;
         debug('call finish: resetting');
-        return finish({ msg: 'action terminated'});
+        return error(ACTION_TERMINATED, {
+          msg: 'action terminated due to resetting'
+        }, finish);
       }
     },
     action: function(block, arg, cb) {
@@ -334,10 +377,10 @@ function koov_actions(board) {
           return;
 
         this.current_action = this.action_queue.pop();
-        const { block: block, arg: arg, finish: finish } = this.current_action;
+        const { block, arg, finish } = this.current_action;
         if (this.resetting) {
           debug('call finish: resetting');
-          return finish({ msg: 'action terminated'});
+          return error(ACTION_TERMINATED, { msg: 'action terminated'}, finish);
         }
 
         if (this[block.name]) {
@@ -348,11 +391,16 @@ function koov_actions(board) {
             });
           } catch (e) {
             debug('call finish: exception', e);
-            return finish(e);
+            return error(ACTION_EXCEPTION, {
+              msg: 'got unexpected exception',
+              exception: e
+            },finish);
           }
         }
         debug('call finish: no such block');
-        return finish({ msg: `no such block ${block.name}`});
+        return error(ACTION_UNKNOWN_BLOCK, {
+          msg: `no such block ${block.name}`
+        }, finish);
       };
       push_action(block, arg, cb);
       return exec();
@@ -389,7 +437,7 @@ function koov_actions(board) {
         (initializer[port_settings[port] || 'input'])(port);
       });
       debug(`done setting port`);
-      return cb();
+      return error(ACTION_NO_ERROR, null, cb);
     },
     'board-init': function(block, arg, cb) {
       debug(`board-init: init led`);
@@ -424,7 +472,7 @@ function koov_actions(board) {
           callback(v);
         }
       });
-      cb();
+      return error(ACTION_NO_ERROR, null, cb);
     },
     'turn-led': noreply(block => {
       var pin = KOOV_PORTS[block.port];
@@ -499,7 +547,9 @@ function koov_actions(board) {
           const degree = SERVOMOTOR_STATE.expected_degree[port];
           servoWrite(board, pin, degree);
         });
-        setTimeout(() => { cb(null); }, max_delta * 3);
+        setTimeout(() => {
+          return error(ACTION_NO_ERROR, null, cb);
+        }, max_delta * 3);
       };
       const move_withdelay = (max_delta, cb, delay) => {
         all_ports().forEach(port => {
@@ -518,7 +568,9 @@ function koov_actions(board) {
           if (count < max_delta)
             setTimeout(() => { return loop(); }, delay);
           else
-            setTimeout(() => { return cb(null); }, delay);
+            setTimeout(() => {
+              return error(ACTION_NO_ERROR, null, cb);
+            }, delay);
         };
         return loop();
       };
@@ -529,8 +581,8 @@ function koov_actions(board) {
         SERVOMOTOR_STATE.synchronized = false;
         const delay = 20 - clamp(0, 20, v.speed);
         const delta = max_delta();
-        if (delta == 0)
-          return cb(null);
+        if (delta === 0)
+          return error(ACTION_NO_ERROR, null, cb);
         if (delay === 0)
           return move_nodelay(delta, cb);
         return move_withdelay(delta, cb, delay);
@@ -540,7 +592,7 @@ function koov_actions(board) {
         SERVOMOTOR_STATE.expected_degree = {};
         SERVOMOTOR_STATE.current_degree = {};
         SERVOMOTOR_STATE.delta = {};
-        return cb(null);
+        return error(ACTION_NO_ERROR, null, cb);
       }
     },
     'set-servomotor-degree': noreply(block => {
@@ -589,7 +641,7 @@ function koov_actions(board) {
           this.callback[type] = null;
           const value = v.value;
           debug(`${type}: port: ${port} value: ${value} (${v.value})`);
-          cb({ error: false, value: value });
+          return error(ACTION_NO_ERROR, { error: false, value: value }, cb);
         };
         const direction =
               block.direction === 'x' ? 0x01 :
@@ -598,14 +650,18 @@ function koov_actions(board) {
           START_SYSEX, 0x0e, 0x01, direction, END_SYSEX
         ]));
       } else
-        cb({ error: true, msg: `${type}: unknown port ${port}`, value: 0 });
+        return error(ACTION_UNKNOWN_PORT, {
+          error: true,
+          msg: `${type}: unknown port ${port}`,
+          value: 0
+        }, cb);
     },
     'bts01-reset': function(block, arg, cb) {
       board.transport.write(new Buffer([
         START_SYSEX, 0x0e, 0x02, 0x01, END_SYSEX
       ]), (err) => {
         debug('board.transport.write callback: bts01-reset:', err);
-        cb(null);
+        return error(ACTION_NO_ERROR, null, cb);
       });
     },
     'bts01-cmd': function(block, arg, cb) {
@@ -623,14 +679,18 @@ function koov_actions(board) {
       this.callback[type] = v => {
         this.callback[type] = null;
         debug(`${type}:`, v);
-        v.error = null;
-        cb(v);
+        v.error = false;
+        return error(ACTION_NO_ERROR, v, cb);
       };
       board.transport.write(cmd, (err) => {
         debug('board.transport.write callback: bts01-cmd:', err);
         if (err) {
           this.callback[type] = null;
-          cb({ error: err });
+          return error(ACTION_BTS01CMD_FAILURE, {
+            error: true,
+            msg: 'failed to control ble module',
+            original_error: err
+          }, cb);
         }
       });
     },
@@ -643,16 +703,20 @@ function koov_actions(board) {
         END_SYSEX
       ]), (err) => {
         debug('board.transport.write callback: koov-reset:', err);
-        cb(null);
+        return error(ACTION_NO_ERROR, null, cb);
       });
     },
     'firmata-version': function(block, arg, cb) {
       debug('firmata-version', arg);
-      cb({ error: null, version: board.firmware.version });
+      return error(ACTION_NO_ERROR, {
+        error: false, version: board.firmware.version
+      }, cb);
     },
     'firmata-name': function(block, arg, cb) {
       debug('firmata-name', arg);
-      cb({ error: null, name: board.firmware.name });
+      return error(ACTION_NO_ERROR, {
+        error: false, name: board.firmware.name
+      }, cb);
     }
   };
 };
@@ -668,7 +732,9 @@ const open_firmata = (action, cb, opts) => {
     return cb(err);
   };
   const timeoutId = setTimeout(() => {
-    return callback('failed to open firmata');
+    return error(ACTION_OPEN_FIRMATA_TIMEDOUT, {
+      msg: 'failed to open firmata'
+    }, callback);
   }, 10000);
   const firmata = require('firmata');
   const transport = {
@@ -677,7 +743,7 @@ const open_firmata = (action, cb, opts) => {
       return action.device.serial_write(data, (err) => {
         //debug('transport: write', err);
         if (cb)
-          return cb(err);
+          return error(err ? ACTION_WRITE_ERROR : ACTION_NO_ERROR, err, cb);
       });
     },
     on: (what, cb) => {
@@ -690,7 +756,7 @@ const open_firmata = (action, cb, opts) => {
   const board = new firmata.Board(transport, opts, (err) => {
     debug('firmata open', err);
     if (err)
-      return callback(err);
+      return error(ACTION_OPEN_FIRMATA_FAILURE, err, callback);
     const keep_alive = () => {
       action.keepAliveId = setTimeout(() => {
         if (!action.device) {
@@ -746,18 +812,18 @@ function Action(opts)
   this.open = function(name, cb) {
     debug('action: open', name);
     if (!this.device)
-      return cb('action: no serial');
+      return error(ACTION_NO_DEVICE, { msg: 'no device found' }, cb);
     this.device.open(name, (err) => {
       debug('action: serial: open', err);
-      if (err)
+      if (error_p(err))
         return cb(err);
       return open_firmata(this, (err) => {
-        if (err)
+        if (error_p(err))
           return cb(err);
         this.board.on('disconnect', on_disconnect);
         this.board.on('error', on_error);
         this.board.on('close', on_close);
-        return cb(null);
+        return error(ACTION_NO_ERROR, null, cb);
       }, {
         reportVersionTimeout: 0,
         //reportVersionTimeout: 5000,
