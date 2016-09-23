@@ -207,6 +207,7 @@ const buzzer_on = (board, pin, frequency) => {
   debug(`buzzer-on: pin: ${pin} freq ${frequency}`);
   board.transport.write(new Buffer([
     START_SYSEX, 0x0f, pin, 1, frequency, END_SYSEX
+    //START_SYSEX, 0x0e, 0x02, 0x04, pin, 1, frequency, END_SYSEX
   ]));
 };
 
@@ -214,6 +215,7 @@ const buzzer_off = (board, pin) => {
   debug(`buzzer-off: pin: ${pin}`);
   board.transport.write(new Buffer([
     START_SYSEX, 0x0f, pin, 0, 0, END_SYSEX
+    //START_SYSEX, 0x0e, 0x02, 0x04, pin, 0, 0, END_SYSEX
   ]));
 };
 
@@ -365,7 +367,8 @@ function koov_actions(board) {
             debug('finish: current', this.current_action);
             return;
           }
-          setImmediate(() => { this.current_action = null; return exec(); });
+          this.current_action = null;
+          setImmediate(() => { return exec(); });
           return cb(err);
         };
         const e = { block: block, arg: arg, finish: finish, id: id };
@@ -410,6 +413,7 @@ function koov_actions(board) {
       'analog-read': {},
       'digital-read': {},
       'accelerometer-read': null,
+      'bts01-reset': null,
       'bts01-cmd': null
     },
     'port-settings': function(block, arg, cb) {
@@ -459,18 +463,14 @@ function koov_actions(board) {
           }
         });
       });
-      board.addListener('accelerometer-read', v => {
-        var callback = this.callback['accelerometer-read'];
-        if (callback) {
-          callback(v);
-        }
-      });
-      board.addListener('bts01-cmd', v => {
-        var callback = this.callback['bts01-cmd'];
-        debug('bts01-cmd', v);
-        if (callback) {
-          callback(v);
-        }
+      ['accelerometer-read', 'bts01-reset', 'bts01-cmd'].forEach(type => {
+        board.addListener(type, v => {
+          const callback = this.callback[type];
+          debug(type, v);
+          if (callback) {
+            callback(v);
+          }
+        });
       });
       return error(ACTION_NO_ERROR, null, cb);
     },
@@ -657,11 +657,34 @@ function koov_actions(board) {
         }, cb);
     },
     'bts01-reset': function(block, arg, cb) {
-      board.transport.write(new Buffer([
-        START_SYSEX, 0x0e, 0x02, 0x01, END_SYSEX
+      if (!arg)
+        arg = {};
+      const timeout = arg.timeout || 1000;
+      const type = 'bts01-reset';
+      this.callback[type] = v => {
+        this.callback[type] = null;
+        debug(`${type}:`, v);
+        v.error = false;
+        return error(ACTION_NO_ERROR, v, cb);
+      };
+      board.transport.write(Buffer.concat([
+        new Buffer([START_SYSEX, 0x0e, 0x02, 0x01]),
+        new Buffer([(timeout >> 7) & 0x7f, timeout & 0x7f]),
+        new Buffer(arg.command ? arg.command : []),
+        new Buffer([END_SYSEX])
       ]), (err) => {
+/*
         debug('board.transport.write callback: bts01-reset:', err);
         return error(ACTION_NO_ERROR, null, cb);
+*/
+        if (err) {
+          this.callback[type] = null;
+          return error(ACTION_BTS01CMD_FAILURE, {
+            error: true,
+            msg: 'failed to control ble module',
+            original_error: err
+          }, cb);
+        }
       });
     },
     'bts01-cmd': function(block, arg, cb) {
