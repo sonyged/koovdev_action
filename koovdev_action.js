@@ -28,11 +28,13 @@ const error_p = (err) => {
 const make_error = (tag, err) => {
   if (tag === ACTION_NO_ERROR)
     return err;
+  const original_err = err;
   if (typeof err === 'string')
     err = { msg: err };
-  if (typeof err !== 'object')
-    err = { msg: 'unknown error', original_error: err };
+  if (typeof err !== 'object' || err === null)
+    err = { msg: 'unknown error' };
   err.error = true;
+  err.original_error = JSON.stringify(original_err);
   if (!err.error_code)
     err.error_code = ((KOOVDEV_ACTION_ERROR << 8) | tag) & 0xffff;
   return err;
