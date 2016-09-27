@@ -663,6 +663,7 @@ function koov_actions(board) {
         arg = {};
       const timeout = arg.timeout || 1000;
       const type = 'bts01-reset';
+      debug('bts01-reset:', arg);
       this.callback[type] = v => {
         this.callback[type] = null;
         debug(`${type}:`, v);
