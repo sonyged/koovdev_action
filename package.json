@@ -1,6 +1,6 @@
 {
   "name": "koovdev_action",
-  "version": "1.0.70",
+  "version": "1.0.71",
   "description": "firmata action management",
   "main": "koovdev_action.js",
   "scripts": {
@@ -11,7 +11,8 @@
   "license": "ISC",
   "dependencies": {
     "debug": "latest",
-    "firmata": "git+ssh://git@bitbucket.org/sonyged/firmata.js.git#koov"
+    "firmata": "git+ssh://git@bitbucket.org/sonyged/firmata.js.git#koov",
+    "koovdev_error": "file:../koovdev_error"
   },
   "devDependencies": {
     "async": "^2.0.1",

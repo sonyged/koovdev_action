@@ -3,6 +3,7 @@
 
 'use strict';
 let debug = require('debug')('koovdev_action');
+const koovdev_error = require('koovdev_error');
 
 const KOOVDEV_ACTION_ERROR = 0xfb;
 
@@ -17,32 +18,9 @@ const ACTION_OPEN_FIRMATA_FAILURE = 0x07;
 const ACTION_WRITE_ERROR = 0x08;
 const ACTION_NO_DEVICE = 0x09;
 
-const error_p = (err) => {
-  if (!err)
-    return false;
-  if (typeof err === 'object')
-    return !!err.error;
-  return true;
-};
-
-const make_error = (tag, err) => {
-  if (tag === ACTION_NO_ERROR)
-    return err;
-  const original_err = err;
-  if (typeof err === 'string')
-    err = { msg: err };
-  if (typeof err !== 'object' || err === null)
-    err = { msg: 'unknown error' };
-  err.error = true;
-  err.original_error = JSON.stringify(original_err);
-  if (!err.error_code)
-    err.error_code = ((KOOVDEV_ACTION_ERROR << 8) | tag) & 0xffff;
-  return err;
-};
-
-const error = (tag, err, cb) => {
-  return cb(make_error(tag, err));
-};
+const { error, error_p, make_error } = koovdev_error(KOOVDEV_ACTION_ERROR, [
+  ACTION_NO_ERROR
+]);
 
 const clamp = (min, max, value) => {
   return Math.max(min, Math.min(max, value));
