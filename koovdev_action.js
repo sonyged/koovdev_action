@@ -726,7 +726,7 @@ function koov_actions(board) {
 };
 
 const open_firmata = (action, cb, opts) => {
-  debug('firmata open');
+  debug('firmata open', opts);
   let called = false;
   const callback = (err) => {
     if (called)
@@ -739,7 +739,7 @@ const open_firmata = (action, cb, opts) => {
     return error(ACTION_OPEN_FIRMATA_TIMEDOUT, {
       msg: 'failed to open firmata'
     }, callback);
-  }, 10000);
+  }, opts.open_firmata_timeout);
   const firmata = require('firmata');
   const transport = {
     write: (data, cb) => {
@@ -757,7 +757,11 @@ const open_firmata = (action, cb, opts) => {
       }, cb);
     }
   };
-  const board = new firmata.Board(transport, opts, (err) => {
+  const board = new firmata.Board(transport, {
+    reportVersionTimeout: 0,
+    //reportVersionTimeout: 5000,
+    //samplingInterval: 10000
+  }, (err) => {
     debug('firmata open', err);
     if (err)
       return error(ACTION_OPEN_FIRMATA_FAILURE, err, callback);
@@ -772,7 +776,7 @@ const open_firmata = (action, cb, opts) => {
           //debug('keep_alive: version reported');
           keep_alive();
         });
-      }, 5 * 1000);
+      }, opts.keep_alive_interval);
     };
     action.action['board-init'](null, null, callback);
     keep_alive();
@@ -829,9 +833,8 @@ function Action(opts)
         this.board.on('close', on_close);
         return error(ACTION_NO_ERROR, null, cb);
       }, {
-        reportVersionTimeout: 0,
-        //reportVersionTimeout: 5000,
-        //samplingInterval: 10000
+        open_firmata_timeout: opts.open_firmata_timeout || 10000,
+        keep_alive_interval: opts.keep_alive_interval || 5 * 1000
       });
     });
   };
