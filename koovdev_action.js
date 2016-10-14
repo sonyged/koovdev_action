@@ -25,6 +25,7 @@ const { error, error_p, make_error } = koovdev_error(KOOVDEV_ACTION_ERROR, [
 const clamp = (min, max, value) => {
   return Math.max(min, Math.min(max, value));
 };
+const to_integer = (x) => Math.floor(Number(x));
 
 const START_SYSEX = 0xF0;
 const END_SYSEX = 0xF7;
@@ -152,7 +153,7 @@ function dcmotor_control(board, port, power, mode) {
 }
 function dcmotor_power(board, port, power) {
   power = clamp(0, 100, power);
-  power = Math.floor(power * analogMax / 100);
+  power = to_integer(power * analogMax / 100);
   dcmotor_control(board, port, power, null);
 }
 function dcmotor_mode(board, port, mode) {
@@ -173,7 +174,7 @@ let SERVOMOTOR_DEGREE = {
 
 const servoWrite = (board, pin, degree) => {
   SERVOMOTOR_DEGREE[pin] = degree;
-  board.servoWrite(pin, degree);
+  board.servoWrite(pin, to_integer(degree));
 };
 
 const servoRead = (board, pin) => {
@@ -184,6 +185,7 @@ const servoRead = (board, pin) => {
 * Buzzer operations.
  */
 const buzzer_on = (board, pin, frequency) => {
+  frequency = to_integer(frequency);
   debug(`buzzer-on: pin: ${pin} freq ${frequency}`);
   board.transport.write(new Buffer([
     START_SYSEX, 0x0f, pin, 1, frequency, END_SYSEX
@@ -482,7 +484,7 @@ function koov_actions(board) {
           board.digitalWrite(fet, board.LOW); // turn on FET
           [r, g, b].forEach((x, idx) => {
             let power = clamp(0, 100, x) * 255 / 100;
-            power = Math.floor(power);
+            power = to_integer(power);
             RGB_STATE[idx].state = true;
             debug(`multi-led: set ${RGB_STATE[idx].pin} to ${power}`);
             board.pinMode(RGB_STATE[idx].pin, board.MODES.PWM);
