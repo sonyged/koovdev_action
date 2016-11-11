@@ -17,6 +17,7 @@ const ACTION_OPEN_FIRMATA_TIMEDOUT = 0x06;
 const ACTION_OPEN_FIRMATA_FAILURE = 0x07;
 const ACTION_WRITE_ERROR = 0x08;
 const ACTION_NO_DEVICE = 0x09;
+const ACTION_TIMEOUT = 0x0a;
 
 const { error, error_p, make_error } = koovdev_error(KOOVDEV_ACTION_ERROR, [
   ACTION_NO_ERROR
@@ -204,7 +205,7 @@ const buzzer_off = (board, pin) => {
 /*
  * Generate action dispatch table for KOOV.
  */
-function koov_actions(board) {
+function koov_actions(board, action_timeout) {
   const null_scaler = (value) => { return value; };
   const analog_scaler = (value) => {
     const in_min = 0;
@@ -365,21 +366,31 @@ function koov_actions(board) {
         const { block, arg, finish } = this.current_action;
         if (this.resetting) {
           debug('call finish: resetting');
-          return error(ACTION_TERMINATED, { msg: 'action terminated'}, finish);
+          return error(ACTION_TERMINATED, {
+            msg: 'action terminated'
+          }, finish);
         }
 
         if (this[block.name]) {
+          const timeoutId = setTimeout(() => {
+            return error(ACTION_TIMEOUT, {
+              msg: 'action timeout',
+              block: block
+            }, finish);
+          }, action_timeout);
           try {
             return this[block.name](block, arg, (err) => {
               //debug('call finish: block callback', err, block);
+              clearTimeout(timeoutId);
               return finish(err);
             });
           } catch (e) {
             debug('call finish: exception', e);
+            clearTimeout(timeoutId);
             return error(ACTION_EXCEPTION, {
               msg: 'got unexpected exception',
               exception: e
-            },finish);
+            }, finish);
           }
         }
         debug('call finish: no such block');
@@ -729,6 +740,7 @@ function koov_actions(board) {
 
 const open_firmata = (action, cb, opts) => {
   debug('firmata open', opts);
+  const action_timeout = opts.action_timeout || 60 * 1000;
   let called = false;
   const callback = (err) => {
     if (called)
@@ -784,7 +796,7 @@ const open_firmata = (action, cb, opts) => {
     keep_alive();
   });
   action.board = board;
-  action.action = koov_actions(board);
+  action.action = koov_actions(board, action_timeout);
 };
 
 function Action(opts)
@@ -836,7 +848,8 @@ function Action(opts)
         return error(ACTION_NO_ERROR, null, cb);
       }, {
         open_firmata_timeout: opts.open_firmata_timeout || 10000,
-        keep_alive_interval: opts.keep_alive_interval || 5 * 1000
+        keep_alive_interval: opts.keep_alive_interval || 5 * 1000,
+        action_timeout: opts.action_timeout || 60 * 1000
       });
     });
   };
