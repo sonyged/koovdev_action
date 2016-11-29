@@ -572,7 +572,8 @@ function koov_actions(board, action_timeout) {
         debug('servomotor-synchronized-motion[after]: ', v,
               SERVOMOTOR_STATE.expected_degree);
         SERVOMOTOR_STATE.synchronized = false;
-        const delay = 20 - clamp(0, 20, v.speed);
+        const speed = clamp(0, 100, v.speed) / 5; // 0..100 -> 0..20
+        const delay = 20 - clamp(0, 20, speed);
         const delta = max_delta();
         if (delta === 0)
           return error(ACTION_NO_ERROR, null, cb);
