@@ -475,8 +475,8 @@ function koov_actions(board, action_timeout) {
         board.digitalWrite(pin, on ? board.HIGH : board.LOW);
       }
     }),
-    'multi-led': noreply(block => {
-      let r = block.r, g = block.g, b = block.b;
+    'multi-led': noreply((block, arg) => {
+      let r = arg.r, g = arg.g, b = arg.b;
       debug(`multi-led: ${r}, ${g}, ${b}`, block);
       if (typeof r === 'number' &&
           typeof g === 'number' &&
@@ -506,10 +506,10 @@ function koov_actions(board, action_timeout) {
         }
       }
     }),
-    'buzzer-on': noreply(block => {
+    'buzzer-on': noreply((block, arg) => {
       const pin = KOOV_PORTS[block.port];
       if (typeof pin === 'number') {
-        buzzer_on(board, pin, block.frequency);
+        buzzer_on(board, pin, arg.frequency);
       }
     }),
     'buzzer-off': noreply(block => {
@@ -589,9 +589,9 @@ function koov_actions(board, action_timeout) {
         return error(ACTION_NO_ERROR, null, cb);
       }
     },
-    'set-servomotor-degree': noreply(block => {
+    'set-servomotor-degree': noreply((block, arg) => {
       const port = block.port;
-      const degree = clamp(0, 180, block.degree);
+      const degree = clamp(0, 180, arg.degree);
       var pin = KOOV_PORTS[port];
       if (typeof pin === 'number') {
         if (SERVOMOTOR_STATE.synchronized) {
@@ -603,8 +603,8 @@ function koov_actions(board, action_timeout) {
         }
       }
     }),
-    'set-dcmotor-power': noreply(block => {
-      dcmotor_power(board, block.port, block.power);
+    'set-dcmotor-power': noreply((block, arg) => {
+      dcmotor_power(board, block.port, arg.power);
     }),
     'turn-dcmotor-on': noreply(block => {
       dcmotor_mode(board, block.port, block.direction);
