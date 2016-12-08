@@ -111,6 +111,59 @@ function turn_fet(board, pin, on) {
 }
 
 /*
+ * DC Motor correction.
+ */
+
+const RPM_TABLE = {
+  NORMAL: [
+    { power: 10, rpm: 0 },
+    { power: 20, rpm: 0 },
+    { power: 30, rpm: 22.5 },
+    { power: 40, rpm: 35.4 },
+    { power: 50, rpm: 45.7 },
+    { power: 60, rpm: 58.2 },
+    { power: 70, rpm: 65.8 },
+    { power: 80, rpm: 68.2 },
+    { power: 90, rpm: 69.7 },
+    { power: 100, rpm: 71.2 },
+  ],
+  REVERSE: [
+    { power: 10, rpm: 0 },
+    { power: 20, rpm: 3.8 },
+    { power: 30, rpm: 8.3 },
+    { power: 40, rpm: 15.2 },
+    { power: 50, rpm: 19.2 },
+    { power: 60, rpm: 29.9 },
+    { power: 70, rpm: 48.6 },
+    { power: 80, rpm: 58.5 },
+    { power: 90, rpm: 65.5 },
+    { power: 100, rpm: 71.3 },
+  ]
+};
+const DCMOTOR_RPM_MAX = 70;
+const DCMOTOR_RPM_MIN = 25;
+
+const INTERPOLATE = (x, minx, maxx, miny, maxy) => {
+  return (maxy - miny) * (clamp(minx, maxx, x) - minx) / (maxx - minx) + miny;
+};
+
+var dcmotor_correction = true;
+const dcmotor_correct = (power, direction) => {
+  if (!dcmotor_correction)
+    return power;
+
+  const table = direction ? RPM_TABLE.NORMAL : RPM_TABLE.REVERSE;
+  const rpm = INTERPOLATE(power, 0, 100, DCMOTOR_RPM_MIN, DCMOTOR_RPM_MAX);
+
+  return table.slice(1).reduce((acc, cur, i) => {
+    const prev = table[i];
+    if (prev.rpm < rpm && rpm <= cur.rpm)
+      return INTERPOLATE(rpm, prev.rpm, cur.rpm, prev.power, cur.power);
+    return acc;
+  }, 0);
+};
+
+/*
  * DC Motor state management.
  */
 const analogMax = 255;
@@ -121,11 +174,23 @@ let DCMOTOR_STATE = [
 const DCMOTOR_MODE = {
   NORMAL: (board, pins, power) => {
     board.digitalWrite(pins[1], board.LOW);
-    board.analogWrite(pins[0], power);
+    if (power > 0) {
+      const opower = power;
+      power = dcmotor_correct(power, true);
+      debug(`set-dcmotor-power/normal: ${opower} -> ${power}`);
+      power = power * analogMax / 100;
+    }
+    board.analogWrite(pins[0], to_integer(power));
   },
   REVERSE: (board, pins, power) => {
     board.digitalWrite(pins[1], board.HIGH);
-    board.analogWrite(pins[0], analogMax - power);
+    if (power > 0) {
+      const opower = power;
+      power = dcmotor_correct(power, false);
+      debug(`set-dcmotor-power/reverse: ${opower} -> ${power}`);
+      power = power * analogMax / 100;
+    }
+    board.analogWrite(pins[0], analogMax - to_integer(power));
   },
   COAST: (board, pins, power) => {
     board.digitalWrite(pins[1], board.LOW);
@@ -154,7 +219,6 @@ function dcmotor_control(board, port, power, mode) {
 }
 function dcmotor_power(board, port, power) {
   power = clamp(0, 100, power);
-  power = to_integer(power * analogMax / 100);
   dcmotor_control(board, port, power, null);
 }
 function dcmotor_mode(board, port, mode) {
@@ -742,6 +806,7 @@ function koov_actions(board, action_timeout) {
 const open_firmata = (action, cb, opts) => {
   debug('firmata open', opts);
   const action_timeout = opts.action_timeout || 60 * 1000;
+  dcmotor_correction = opts.dcmotor_correction;
   let called = false;
   const callback = (err) => {
     if (called)
@@ -850,7 +915,8 @@ function Action(opts)
       }, {
         open_firmata_timeout: opts.open_firmata_timeout || 10000,
         keep_alive_interval: opts.keep_alive_interval || 5 * 1000,
-        action_timeout: opts.action_timeout || 60 * 1000
+        action_timeout: opts.action_timeout || 60 * 1000,
+        dcmotor_correction: opts.dcmotor_correction
       });
     });
   };
