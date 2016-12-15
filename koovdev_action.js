@@ -116,6 +116,7 @@ function turn_fet(board, pin, on) {
 
 const RPM_TABLE = {
   NORMAL: [
+    { power: 0, rpm: 0 },
     { power: 10, rpm: 0 },
     { power: 20, rpm: 0 },
     { power: 30, rpm: 22.5 },
@@ -128,6 +129,7 @@ const RPM_TABLE = {
     { power: 100, rpm: 71.2 },
   ],
   REVERSE: [
+    { power: 0, rpm: 0 },
     { power: 10, rpm: 0 },
     { power: 20, rpm: 3.8 },
     { power: 30, rpm: 8.3 },
@@ -142,6 +144,7 @@ const RPM_TABLE = {
 };
 const DCMOTOR_RPM_MAX = 70;
 const DCMOTOR_RPM_MIN = 25;
+const DCMOTOR_POWER_SWITCH = 10;
 
 const INTERPOLATE = (x, minx, maxx, miny, maxy) => {
   return (maxy - miny) * (clamp(minx, maxx, x) - minx) / (maxx - minx) + miny;
@@ -153,11 +156,18 @@ const dcmotor_correct = (power, direction) => {
     return power;
 
   const table = direction ? RPM_TABLE.NORMAL : RPM_TABLE.REVERSE;
-  const rpm = INTERPOLATE(power, 0, 100, DCMOTOR_RPM_MIN, DCMOTOR_RPM_MAX);
+
+  if (power < DCMOTOR_POWER_SWITCH) {
+    const power_switch = dcmotor_correct(DCMOTOR_POWER_SWITCH, direction);
+    return power_switch * power / DCMOTOR_POWER_SWITCH;
+  }
+
+  const rpm = INTERPOLATE(power, DCMOTOR_POWER_SWITCH, 100,
+                          DCMOTOR_RPM_MIN, DCMOTOR_RPM_MAX);
 
   return table.slice(1).reduce((acc, cur, i) => {
     const prev = table[i];
-    if (prev.rpm < rpm && rpm <= cur.rpm)
+    if (prev.rpm <= rpm && rpm <= cur.rpm)
       return INTERPOLATE(rpm, prev.rpm, cur.rpm, prev.power, cur.power);
     return acc;
   }, 0);
