@@ -507,8 +507,12 @@ function koov_actions(board, action_timeout) {
         debug(`setting port ${port}`);
         (initializer[port_settings[port] || 'input'])(port);
       });
-      debug(`done setting port`);
-      return error(ACTION_NO_ERROR, null, cb);
+      debug(`port-settings: all settings issued`);
+      board.queryFirmware(() => {
+        debug('port-settings: query firmware done');
+        return error(ACTION_NO_ERROR, null, cb);
+      });
+      debug(`port-settings: dummy query firmware issued`);
     },
     'board-init': function(block, arg, cb) {
       debug(`board-init: init led`);
