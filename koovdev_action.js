@@ -483,47 +483,21 @@ function koov_actions(board, action_timeout) {
       'bts01-reset': null,
       'bts01-cmd': null
     },
-    'port-reset': function(block, arg, cb) {
-      const port_settings = block['port-settings'];
-      debug('port-reset', port_settings);
-      board.reset();
-      // Removing this if guard prevented servo motor from initializing.
-      if (port_settings['RGB'] || true) {
-        debug(`resetting multi-led`);
-        ['LED_R', 'LED_G', 'LED_B', 'LED_FET'].forEach(x => {
-          board.pinMode(KOOV_PORTS[x], board.MODES.OUTPUT);
-          board.digitalWrite(KOOV_PORTS[x], board.HIGH);
-        });
-      }
-      ['V0', 'V1'].forEach(port => {
-        if (port_settings[port])
-          init_dcmotor(port);
-      });
-      ['V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9'].forEach(port => {
-        if (port_settings[port]) {
-          debug(`resetting port ${port}`);
-          (initializer[port_settings[port]])(port);
-        }
-      });
-      ['K2', 'K3', 'K4', 'K5', 'K6', 'K7'].forEach(port => {
-        if (port_settings[port]) {
-          debug(`resetting port ${port}`);
-          (initializer[port_settings[port]])(port);
-        }
-      });
-      debug(`port-reset: all settings issued`);
-      board.queryFirmware(() => {
-        debug('port-settings: query firmware done');
-        return error(ACTION_NO_ERROR, null, cb);
-      });
-      debug(`port-settings: dummy query firmware issued`);
-    },
     'port-settings': function(block, arg, cb) {
       const port_settings = block['port-settings'];
-      debug('port-settings', port_settings);
+      /*
+       * If true, reset only ports listed in port-settings.
+       * Otherwise, reset other ports as default output or input
+       * ports.
+       */
+      const reset_only = !!block['reset-only'];
+      debug(`port-settings: reset_only: ${reset_only}`, port_settings);
       board.reset();
-      // Removing this if guard prevented servo motor from initializing.
-      if (port_settings['RGB'] || true) {
+      /*
+       * Multi LED configuration must be done first since it may
+       * conflict with servomotor.
+       */
+      if (true) {
         debug(`setting multi-led`);
         ['LED_R', 'LED_G', 'LED_B', 'LED_FET'].forEach(x => {
           board.pinMode(KOOV_PORTS[x], board.MODES.OUTPUT);
@@ -535,12 +509,24 @@ function koov_actions(board, action_timeout) {
           init_dcmotor(port);
       });
       ['V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9'].forEach(port => {
-        debug(`setting port ${port}`);
-        (initializer[port_settings[port] || 'output'])(port);
+        if (port_settings[port]) {
+          debug(`setting port ${port}`);
+          (initializer[port_settings[port]])(port);
+        } else {
+          if (!reset_only) {
+            (initializer['output'])(port);
+          }
+        }
       });
       ['K2', 'K3', 'K4', 'K5', 'K6', 'K7'].forEach(port => {
-        debug(`setting port ${port}`);
-        (initializer[port_settings[port] || 'input'])(port);
+        if (reset_only)
+          return;
+        if (port_settings[port]) {
+          debug(`setting port ${port}`);
+          (initializer[port_settings[port]])(port);
+        } else {
+          (initializer['input'])(port);
+        }
       });
       debug(`port-settings: all settings issued`);
       board.queryFirmware(() => {
