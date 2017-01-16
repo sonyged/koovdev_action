@@ -145,6 +145,7 @@ const RPM_TABLE = {
 const DCMOTOR_RPM_MAX = 70;
 const DCMOTOR_RPM_MIN = 25;
 const DCMOTOR_POWER_SWITCH = 10;
+const DCMOTOR_INITIAL_POWER = 30;
 
 const INTERPOLATE = (x, minx, maxx, miny, maxy) => {
   return (maxy - miny) * (clamp(minx, maxx, x) - minx) / (maxx - minx) + miny;
@@ -178,8 +179,8 @@ const dcmotor_correct = (power, direction) => {
  */
 const analogMax = 255;
 let DCMOTOR_STATE = [
-  { port: 'V0', power: 0, mode: 'COAST' },
-  { port: 'V1', power: 0, mode: 'COAST' }
+  { port: 'V0', power: DCMOTOR_INITIAL_POWER, mode: 'COAST' },
+  { port: 'V1', power: DCMOTOR_INITIAL_POWER, mode: 'COAST' }
 ];
 const DCMOTOR_MODE = {
   NORMAL: (board, pins, power) => {
@@ -224,6 +225,7 @@ function dcmotor_control(board, port, power, mode) {
       dm.power = power;
     if (mode !== null)
       dm.mode = mode;
+    debug(`dcmotor_control: pin: ${pins} power ${dm.power}`);
     DCMOTOR_MODE[dm.mode](board, pins, dm.power);
   }
 }
@@ -367,7 +369,7 @@ function koov_actions(board, action_timeout) {
       debug(`init_dcmotor: pins ${pins[0]} ${pins[1]}`);
       board.pinMode(pins[1], board.MODES.OUTPUT);
       board.pinMode(pins[0], board.MODES.PWM);
-      dcmotor_control(board, port, 0, 'COAST');
+      dcmotor_control(board, port, DCMOTOR_INITIAL_POWER, 'COAST');
     }
   };
   const init_accel = port => {
