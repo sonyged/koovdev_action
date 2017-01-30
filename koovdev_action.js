@@ -281,7 +281,7 @@ const buzzer_off = (board, pin) => {
 /*
  * Generate action dispatch table for KOOV.
  */
-function koov_actions(board, action_timeout) {
+function koov_actions(board, action_timeout, selected_device) {
   const null_scaler = (value) => { return value; };
   const analog_scaler = (value) => {
     const in_min = 0;
@@ -395,6 +395,17 @@ function koov_actions(board, action_timeout) {
     '3-axis-digital-accelerometer': init_accel,
     'push-button': init_button
   };
+  const ack_device = (tag, board, cb) => {
+    return board.queryFirmware(() => {
+      debug(`${tag}: query firmware done`);
+      return cb();
+    });
+  };
+  const ack_noerror = (tag, board, cb) => {
+    return ack_device(tag, board, () => {
+      return error(ACTION_NO_ERROR, null, cb);
+    });
+  };
 
   return {
     action_queue: [],
@@ -469,7 +480,7 @@ function koov_actions(board, action_timeout) {
             }, finish);
           }
         }
-        debug('call finish: no such block');
+        debug('call finish: no such block', block);
         return error(ACTION_UNKNOWN_BLOCK, {
           msg: `no such block ${block.name}`
         }, finish);
@@ -639,6 +650,7 @@ function koov_actions(board, action_timeout) {
         all_ports().forEach(port => {
           const pin = KOOV_PORTS[port];
           const degree = SERVOMOTOR_STATE.expected_degree[port];
+          debug(`move_nodelay: port ${port} degree ${degree}`);
           servoWrite(board, pin, degree);
         });
         setTimeout(() => {
@@ -657,7 +669,9 @@ function koov_actions(board, action_timeout) {
             const pin = KOOV_PORTS[port];
             const delta = SERVOMOTOR_STATE.delta[port];
             const curdeg = SERVOMOTOR_STATE.current_degree[port];
-            servoWrite(board, pin, curdeg + delta * count);
+            const degree = curdeg + delta * count;
+            debug(`move_withdelay: port ${port} degree ${degree}`);
+            servoWrite(board, pin, degree);
           });
           if (count < max_delta)
             setTimeout(() => { return loop(); }, delay);
@@ -703,6 +717,17 @@ function koov_actions(board, action_timeout) {
           servoWrite(board, pin, degree);
         }
       }
+    }),
+    'set-servomotor-degrees': noreply((block, arg) => {
+      debug(`set-servomotor-degrees: degrees:`, arg.degrees);
+      Object.keys(arg.degrees).forEach(port => {
+        const degree = clamp(0, 180, arg.degrees[port]);
+        const pin = KOOV_PORTS[port];
+        if (typeof pin === 'number') {
+          debug(`set-servomotor-degrees: pin: ${pin} degree: ${degree}`);
+          servoWrite(board, pin, degree);
+        }
+      });
     }),
     'set-dcmotor-power': noreply((block, arg) => {
       dcmotor_power(board, block.port, arg.power);
@@ -836,6 +861,33 @@ function koov_actions(board, action_timeout) {
       return error(ACTION_NO_ERROR, {
         error: false, name: board.firmware.name
       }, cb);
+    },
+    'servomotor-degrees': function(block, arg, cb) {
+      debug('servomotor-degrees: arg', arg);
+      const degrees = Object.keys(KOOV_PORTS).reduce((acc, port) => {
+        const pin = KOOV_PORTS[port];
+        if (typeof pin === 'number') {
+          const degree = SERVOMOTOR_DEGREE[pin];
+          if (typeof degree === 'number')
+            acc[port] = degree;
+        }
+        return acc;
+      }, {});
+      debug('servomotor-degrees: degrees', degrees);
+      return error(ACTION_NO_ERROR, {
+        error: false,
+        degrees: degrees,
+        state: SERVOMOTOR_STATE,
+        selected_device: selected_device
+      }, cb);
+    },
+    'reset-servomotor-synchronized-motion': function(block, arg, cb) {
+      debug('reset-servomotor-synchronized-motion: arg', arg);
+      SERVOMOTOR_STATE.synchronized = false;
+      board.queryFirmware(() => {
+        debug('port-settings: query firmware done');
+        return error(ACTION_NO_ERROR, null, cb);
+      });
     }
   };
 };
@@ -899,7 +951,7 @@ const open_firmata = (action, cb, opts) => {
     keep_alive();
   });
   action.board = board;
-  action.action = koov_actions(board, action_timeout);
+  action.action = koov_actions(board, action_timeout, action.selected_device);
 };
 
 function Action(opts)
@@ -908,6 +960,7 @@ function Action(opts)
   this.action = null;
   this.keepAliveId = null;
   this.device = opts.device;
+  this.selected_device = null;
   if (opts.debug)
     debug = opts.debug;
   const termiate_device = () => {
@@ -938,6 +991,7 @@ function Action(opts)
     debug('action: open', name);
     if (!this.device)
       return error(ACTION_NO_DEVICE, { msg: 'no device found' }, cb);
+    this.selected_device = name;
     this.device.open(name, (err) => {
       debug('action: serial: open', err);
       if (error_p(err))
@@ -959,6 +1013,7 @@ function Action(opts)
   };
   this.close = function(cb) {
     debug('action: close');
+    this.selected_device = null;
     if (this.keepAliveId) {
       debug('close: clear keep alive timer');
       clearTimeout(this.keepAliveId);
