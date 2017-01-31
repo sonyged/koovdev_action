@@ -250,6 +250,7 @@ let SERVOMOTOR_DEGREE = {
 };
 
 const servoWrite = (board, pin, degree) => {
+  debug(`servoWrite: pin: ${pin}`, degree);
   SERVOMOTOR_DEGREE[pin] = degree;
   board.servoWrite(pin, to_integer(degree));
 };
@@ -328,6 +329,16 @@ function koov_actions(board, action_timeout, selected_device) {
       action(block, arg);
       //debug(`${block.name}: call callback`);
       return error(ACTION_NO_ERROR, null, cb);
+    };
+  };
+  const syncreply = action => {
+    return (block, arg, cb) => {
+      action(block, arg);
+      //debug(`${block.name}: call callback`);
+      board.queryFirmware(() => {
+        debug('sync-reply: query firmware done');
+        return error(ACTION_NO_ERROR, null, cb);
+      });
     };
   };
 
@@ -718,17 +729,25 @@ function koov_actions(board, action_timeout, selected_device) {
         }
       }
     }),
-    'set-servomotor-degrees': noreply((block, arg) => {
+    'set-servomotor-degrees': (block, arg, cb) => {
       debug(`set-servomotor-degrees: degrees:`, arg.degrees);
       Object.keys(arg.degrees).forEach(port => {
         const degree = clamp(0, 180, arg.degrees[port]);
         const pin = KOOV_PORTS[port];
         if (typeof pin === 'number') {
-          debug(`set-servomotor-degrees: pin: ${pin} degree: ${degree}`);
           servoWrite(board, pin, degree);
         }
       });
-    }),
+      if (arg.sync) {
+        board.queryFirmware(() => {
+          debug('set-servomotor-degrees: query firmware done');
+          return error(ACTION_NO_ERROR, null, cb);
+        });
+      } else {
+        debug('set-servomotor-degrees: no sync');
+        return error(ACTION_NO_ERROR, null, cb);
+      }
+    },
     'set-dcmotor-power': noreply((block, arg) => {
       dcmotor_power(board, block.port, arg.power);
     }),
@@ -863,9 +882,10 @@ function koov_actions(board, action_timeout, selected_device) {
       }, cb);
     },
     'servomotor-degrees': function(block, arg, cb) {
-      debug('servomotor-degrees: arg', arg);
+      debug('servomotor-degrees: arg', arg, SERVOMOTOR_DEGREE);
       const degrees = Object.keys(KOOV_PORTS).reduce((acc, port) => {
         const pin = KOOV_PORTS[port];
+        debug(`servomotor-degrees: port ${port}, pin ${pin}`);
         if (typeof pin === 'number') {
           const degree = SERVOMOTOR_DEGREE[pin];
           if (typeof degree === 'number')
