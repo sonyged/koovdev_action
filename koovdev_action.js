@@ -260,7 +260,7 @@ const servoRead = (board, pin) => {
 };
 
 /*
-* Buzzer operations.
+ * Buzzer operations.
  */
 const buzzer_on = (board, pin, frequency) => {
   frequency = to_integer(frequency);
@@ -277,6 +277,22 @@ const buzzer_off = (board, pin) => {
     START_SYSEX, 0x0f, pin, 0, 0, END_SYSEX
     //START_SYSEX, 0x0e, 0x02, 0x04, pin, 0, 0, END_SYSEX
   ]));
+};
+
+/*
+ * Servomotor operations.
+ */
+const servomotor_synchronized_motion = (board, speed, degrees) => {
+  debug(`servomotor_synchronized_motion:`, speed, degrees);
+  const sync_params = Object.keys(degrees).reduce((acc, port) => {
+    const pin = KOOV_PORTS[port];
+    if (typeof pin !== 'number')
+      return acc;
+    return acc.concat(pin, clamp(0, 180, degrees[port]));
+  }, []);
+  board.transport.write(new Buffer([
+    START_SYSEX, 0x0e, 0x02, 0x05, speed
+  ].concat(sync_params.length / 2, sync_params, END_SYSEX)));
 };
 
 /*
@@ -590,7 +606,7 @@ function koov_actions(board, action_timeout, selected_device) {
       });
       return error(ACTION_NO_ERROR, null, cb);
     },
-    'turn-led': noreply(block => {
+    'turn-led': syncreply(block => {
       var pin = KOOV_PORTS[block.port];
       if (typeof pin === 'number') {
         var on = block.mode === 'ON';
@@ -598,7 +614,7 @@ function koov_actions(board, action_timeout, selected_device) {
         board.digitalWrite(pin, on ? board.HIGH : board.LOW);
       }
     }),
-    'multi-led': noreply((block, arg) => {
+    'multi-led': syncreply((block, arg) => {
       let r = arg.r, g = arg.g, b = arg.b;
       debug(`multi-led: ${r}, ${g}, ${b}`, block);
       if (typeof r === 'number' &&
@@ -629,13 +645,13 @@ function koov_actions(board, action_timeout, selected_device) {
         }
       }
     }),
-    'buzzer-on': noreply((block, arg) => {
+    'buzzer-on': syncreply((block, arg) => {
       const pin = KOOV_PORTS[block.port];
       if (typeof pin === 'number') {
         buzzer_on(board, pin, arg.frequency);
       }
     }),
-    'buzzer-off': noreply(block => {
+    'buzzer-off': syncreply(block => {
       const pin = KOOV_PORTS[block.port];
       if (typeof pin === 'number') {
         buzzer_off(board, pin);
@@ -715,7 +731,7 @@ function koov_actions(board, action_timeout, selected_device) {
         return error(ACTION_NO_ERROR, null, cb);
       }
     },
-    'set-servomotor-degree': noreply((block, arg) => {
+    'set-servomotor-degree': syncreply((block, arg) => {
       const port = block.port;
       const degree = clamp(0, 180, arg.degree);
       var pin = KOOV_PORTS[port];
@@ -748,13 +764,22 @@ function koov_actions(board, action_timeout, selected_device) {
         return error(ACTION_NO_ERROR, null, cb);
       }
     },
-    'set-dcmotor-power': noreply((block, arg) => {
+    'move-servomotors': (block, arg, cb) => {
+      debug(`move-servomotors: degrees:`, arg.degrees);
+      servomotor_synchronized_motion(board, arg.speed, arg.degrees);
+      board.queryFirmware(() => {
+        debug('move-servomotors: query firmware done');
+        SERVOMOTOR_STATE.synchronized = false;
+        return error(ACTION_NO_ERROR, null, cb);
+      });
+    },
+    'set-dcmotor-power': syncreply((block, arg) => {
       dcmotor_power(board, block.port, arg.power);
     }),
-    'turn-dcmotor-on': noreply(block => {
+    'turn-dcmotor-on': syncreply(block => {
       dcmotor_mode(board, block.port, block.direction);
     }),
-    'turn-dcmotor-off': noreply(block => {
+    'turn-dcmotor-off': syncreply(block => {
       dcmotor_mode(board, block.port, block.mode);
     }),
     'button-value': digital_reporter(pin => {
@@ -877,8 +902,16 @@ function koov_actions(board, action_timeout, selected_device) {
     },
     'firmata-name': function(block, arg, cb) {
       debug('firmata-name', arg);
+      const name = board.firmware.name;
+      let { major, minor, patch } = { major: 0, minor: 0, patch: 0 };
+      if (name && typeof name === 'string') {
+        const m = name.match(/koov-(\d+)\.(\d+)\.(\d+)/);
+        if (m) {
+          [ major, minor, patch ] = m.slice(1, 4);
+        }
+      }
       return error(ACTION_NO_ERROR, {
-        error: false, name: board.firmware.name
+        error: false, name: name, major: major, minor: minor, patch: patch
       }, cb);
     },
     'servomotor-degrees': function(block, arg, cb) {
