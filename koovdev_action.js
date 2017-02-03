@@ -351,8 +351,8 @@ function koov_actions(board, action_timeout, selected_device) {
     return (block, arg, cb) => {
       action(block, arg);
       //debug(`${block.name}: call callback`);
-      board.queryFirmware(() => {
-        debug('sync-reply: query firmware done');
+      board.reportVersion(() => {
+        debug('sync-reply: report version done');
         return error(ACTION_NO_ERROR, null, cb);
       });
     };
@@ -423,8 +423,8 @@ function koov_actions(board, action_timeout, selected_device) {
     'push-button': init_button
   };
   const ack_device = (tag, board, cb) => {
-    return board.queryFirmware(() => {
-      debug(`${tag}: query firmware done`);
+    return board.reportVersion(() => {
+      debug(`${tag}: report version done`);
       return cb();
     });
   };
@@ -569,8 +569,8 @@ function koov_actions(board, action_timeout, selected_device) {
         }
       });
       debug(`port-settings: all settings issued`);
-      board.queryFirmware(() => {
-        debug('port-settings: query firmware done');
+      board.reportVersion(() => {
+        debug('port-settings: report version done');
         return error(ACTION_NO_ERROR, null, cb);
       });
       debug(`port-settings: dummy query firmware issued`);
@@ -755,8 +755,8 @@ function koov_actions(board, action_timeout, selected_device) {
         }
       });
       if (arg.sync) {
-        board.queryFirmware(() => {
-          debug('set-servomotor-degrees: query firmware done');
+        board.reportVersion(() => {
+          debug('set-servomotor-degrees: report version done');
           return error(ACTION_NO_ERROR, null, cb);
         });
       } else {
@@ -767,8 +767,8 @@ function koov_actions(board, action_timeout, selected_device) {
     'move-servomotors': (block, arg, cb) => {
       debug(`move-servomotors: degrees:`, arg.degrees);
       servomotor_synchronized_motion(board, arg.speed, arg.degrees);
-      board.queryFirmware(() => {
-        debug('move-servomotors: query firmware done');
+      board.reportVersion(() => {
+        debug('move-servomotors: report version done');
         SERVOMOTOR_STATE.synchronized = false;
         return error(ACTION_NO_ERROR, null, cb);
       });
@@ -918,7 +918,7 @@ function koov_actions(board, action_timeout, selected_device) {
       debug('servomotor-degrees: arg', arg, SERVOMOTOR_DEGREE);
       const degrees = Object.keys(KOOV_PORTS).reduce((acc, port) => {
         const pin = KOOV_PORTS[port];
-        debug(`servomotor-degrees: port ${port}, pin ${pin}`);
+        //debug(`servomotor-degrees: port ${port}, pin ${pin}`);
         if (typeof pin === 'number') {
           const degree = SERVOMOTOR_DEGREE[pin];
           if (typeof degree === 'number')
@@ -937,8 +937,8 @@ function koov_actions(board, action_timeout, selected_device) {
     'reset-servomotor-synchronized-motion': function(block, arg, cb) {
       debug('reset-servomotor-synchronized-motion: arg', arg);
       SERVOMOTOR_STATE.synchronized = false;
-      board.queryFirmware(() => {
-        debug('port-settings: query firmware done');
+      board.reportVersion(() => {
+        debug('port-settings: report version done');
         return error(ACTION_NO_ERROR, null, cb);
       });
     }
