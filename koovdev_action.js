@@ -606,7 +606,7 @@ function koov_actions(board, action_timeout, selected_device) {
       });
       return error(ACTION_NO_ERROR, null, cb);
     },
-    'turn-led': noreply(block => {
+    'turn-led': syncreply(block => {
       var pin = KOOV_PORTS[block.port];
       if (typeof pin === 'number') {
         var on = block.mode === 'ON';
@@ -614,7 +614,7 @@ function koov_actions(board, action_timeout, selected_device) {
         board.digitalWrite(pin, on ? board.HIGH : board.LOW);
       }
     }),
-    'multi-led': noreply((block, arg) => {
+    'multi-led': syncreply((block, arg) => {
       let r = arg.r, g = arg.g, b = arg.b;
       debug(`multi-led: ${r}, ${g}, ${b}`, block);
       if (typeof r === 'number' &&
@@ -645,13 +645,13 @@ function koov_actions(board, action_timeout, selected_device) {
         }
       }
     }),
-    'buzzer-on': noreply((block, arg) => {
+    'buzzer-on': syncreply((block, arg) => {
       const pin = KOOV_PORTS[block.port];
       if (typeof pin === 'number') {
         buzzer_on(board, pin, arg.frequency);
       }
     }),
-    'buzzer-off': noreply(block => {
+    'buzzer-off': syncreply(block => {
       const pin = KOOV_PORTS[block.port];
       if (typeof pin === 'number') {
         buzzer_off(board, pin);
@@ -731,7 +731,7 @@ function koov_actions(board, action_timeout, selected_device) {
         return error(ACTION_NO_ERROR, null, cb);
       }
     },
-    'set-servomotor-degree': noreply((block, arg) => {
+    'set-servomotor-degree': syncreply((block, arg) => {
       const port = block.port;
       const degree = clamp(0, 180, arg.degree);
       var pin = KOOV_PORTS[port];
@@ -773,13 +773,13 @@ function koov_actions(board, action_timeout, selected_device) {
         return error(ACTION_NO_ERROR, null, cb);
       });
     },
-    'set-dcmotor-power': noreply((block, arg) => {
+    'set-dcmotor-power': syncreply((block, arg) => {
       dcmotor_power(board, block.port, arg.power);
     }),
-    'turn-dcmotor-on': noreply(block => {
+    'turn-dcmotor-on': syncreply(block => {
       dcmotor_mode(board, block.port, block.direction);
     }),
-    'turn-dcmotor-off': noreply(block => {
+    'turn-dcmotor-off': syncreply(block => {
       dcmotor_mode(board, block.port, block.mode);
     }),
     'button-value': digital_reporter(pin => {
