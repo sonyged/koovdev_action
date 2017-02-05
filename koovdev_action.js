@@ -938,7 +938,14 @@ function koov_actions(board, action_timeout, selected_device) {
       debug('reset-servomotor-synchronized-motion: arg', arg);
       SERVOMOTOR_STATE.synchronized = false;
       board.reportVersion(() => {
-        debug('port-settings: report version done');
+        debug('reset-servomotor-synchronized-motion: report version done');
+        return error(ACTION_NO_ERROR, null, cb);
+      });
+    },
+    'sync-device': function(block, arg, cb) {
+      debug('sync-device: arg', arg);
+      board.reportVersion(() => {
+        debug('sync-device: report version done');
         return error(ACTION_NO_ERROR, null, cb);
       });
     }
