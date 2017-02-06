@@ -279,6 +279,24 @@ const buzzer_off = (board, pin) => {
   ]));
 };
 
+const play_melody = (board, pin, melody, cb) => {
+  debug(`buzzer-on: pin: ${pin}`, melody);
+  board.transport.write(new Buffer([
+    START_SYSEX, 0x0e, 0x02, 0x06, pin
+  ].concat(melody.slice(0, 28).reduce((acc, x) => {
+    const freq = to_integer(x.frequency);
+    const tms = to_integer(x.secs * 1000 / 10);
+    const valid_freq = freq => (48 <= freq && freq <= 108);
+
+    acc.push(((valid_freq(freq) ? freq - 47 : 0) << 1) | (tms > 0xff ? 1 : 0));
+    acc.push((tms & 0xff) == END_SYSEX ? END_SYSEX + 1 : (tms & 0xff));
+    return acc;
+  }, []), END_SYSEX)), (err) => {
+    debug('transport: write', err);
+    return error(err ? ACTION_WRITE_ERROR : ACTION_NO_ERROR, err, cb);
+  });
+};
+
 /*
  * Servomotor operations.
  */
@@ -657,6 +675,21 @@ function koov_actions(board, action_timeout, selected_device) {
         buzzer_off(board, pin);
       }
     }),
+    'melody': (block, arg, cb) => {
+      const pin = KOOV_PORTS[block.port];
+      if (typeof pin !== 'number')
+        return cb(null);
+      const send = (melody) => {
+        if (melody.length === 0)
+          return cb(null);
+        play_melody(board, pin, melody.slice(0, 20), (err) => {
+          if (error_p(err))
+            return cb(err);
+          return send(melody.slice(20));
+        });
+      };
+      return send(arg.melody);
+    },
     'servomotor-synchronized-motion': (block, arg, cb) => {
       const all_ports = () => {
         return Object.keys(SERVOMOTOR_STATE.expected_degree);
