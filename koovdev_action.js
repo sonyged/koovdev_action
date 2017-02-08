@@ -280,7 +280,7 @@ const buzzer_off = (board, pin) => {
 };
 
 const play_melody = (board, pin, melody, cb) => {
-  debug(`buzzer-on: pin: ${pin}`, melody);
+  debug(`buzzer-on (melody): pin: ${pin}`, melody);
   board.transport.write(new Buffer([
     START_SYSEX, 0x0e, 0x02, 0x06, pin
   ].concat(melody.slice(0, 28).reduce((acc, x) => {
@@ -457,6 +457,7 @@ function koov_actions(board, action_timeout, selected_device) {
     action_id: 0,
     current_action: null,
     resetting: false,
+    pending_error: null,
     reset: function() {
       debug('reset:', this.current_action);
       this.resetting = true;
@@ -504,6 +505,11 @@ function koov_actions(board, action_timeout, selected_device) {
         }
 
         if (this[block.name]) {
+          if (this.pending_error) {
+            const err = this.pending_error;
+            this.pending_error = null;
+            return finish(err);
+          }
           const timeoutId = setTimeout(() => {
             return error(ACTION_TIMEOUT, {
               msg: 'action timeout',
@@ -675,20 +681,34 @@ function koov_actions(board, action_timeout, selected_device) {
         buzzer_off(board, pin);
       }
     }),
-    'melody': (block, arg, cb) => {
+    'melody': function(block, arg, cb) {
       const pin = KOOV_PORTS[block.port];
       if (typeof pin !== 'number')
         return cb(null);
+      debug(`melody: pin ${pin}`, arg.melody);
       const send = (melody) => {
         if (melody.length === 0)
-          return cb(null);
-        play_melody(board, pin, melody.slice(0, 20), (err) => {
-          if (error_p(err))
-            return cb(err);
-          return send(melody.slice(20));
+          return;
+        const start = Date.now();
+        const m = melody.slice(0, 20);
+        const delay = m.reduce((acc, x) => acc + x.secs * 1000, 0);
+        debug(`melody ${start}: sending (total ${delay}ms)`, m);
+        play_melody(board, pin, m, (err) => {
+          if (error_p(err)) {
+            if (!this.pending_error)
+              this.pending_error = err;
+            return;
+          }
+          const now = Date.now();
+          const wait = start + delay - now;
+          debug(`melody ${now}: sent (wait ${wait}ms)`, m);
+          return setTimeout(() => {
+            return send(melody.slice(20));
+          }, wait > 0 ? wait : 0);
         });
       };
-      return send(arg.melody);
+      send(arg.melody);
+      return cb(null);
     },
     'servomotor-synchronized-motion': (block, arg, cb) => {
       const all_ports = () => {
