@@ -458,6 +458,7 @@ function koov_actions(board, action_timeout, selected_device) {
     current_action: null,
     resetting: false,
     pending_error: null,
+    stop_melody: false,
     reset: function() {
       debug('reset:', this.current_action);
       this.resetting = true;
@@ -556,6 +557,7 @@ function koov_actions(board, action_timeout, selected_device) {
        */
       const reset_only = !!block['reset-only'];
       debug(`port-settings: reset_only: ${reset_only}`, port_settings);
+      this.stop_melody = true;
       board.reset();
       /*
        * Multi LED configuration must be done first since it may
@@ -686,9 +688,14 @@ function koov_actions(board, action_timeout, selected_device) {
       if (typeof pin !== 'number')
         return cb(null);
       debug(`melody: pin ${pin}`, arg.melody);
+      this.stop_melody = false;
       const send = (melody) => {
         if (melody.length === 0)
           return;
+        if (this.stop_melody) {
+          debug(`melody: stop requested`);
+          return;
+        }
         const start = Date.now();
         const m = melody.slice(0, 20);
         const delay = m.reduce((acc, x) => acc + x.secs * 1000, 0);
