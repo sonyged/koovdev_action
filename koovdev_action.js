@@ -671,6 +671,22 @@ function koov_actions(board, action_timeout, selected_device) {
         }
       }
     }),
+    /* multi-led action for koov-1.0.7 or later */
+    'multi-led.1': noreply((block, arg) => {
+      const r = arg.r, g = arg.g, b = arg.b;
+      debug(`multi-led.1: ${r}, ${g}, ${b}`, block);
+      if (typeof r === 'number' &&
+          typeof g === 'number' &&
+          typeof b === 'number') {
+        const rgb = [r, g, b].map(x => to_integer(clamp(0, 100, x)));
+        const sysex = Buffer.concat([
+          new Buffer([START_SYSEX, 0x0e, 0x02, 0x07 ]),
+          new Buffer(rgb),
+          new Buffer([END_SYSEX])]);
+        debug(`multi-led.1:`, rgb, sysex);
+        board.transport.write(sysex);
+      }
+    }),
     'buzzer-on': noreply((block, arg) => {
       const pin = KOOV_PORTS[block.port];
       if (typeof pin === 'number') {
