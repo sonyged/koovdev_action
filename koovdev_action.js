@@ -18,6 +18,9 @@ const ACTION_OPEN_FIRMATA_FAILURE = 0x07;
 const ACTION_WRITE_ERROR = 0x08;
 const ACTION_NO_DEVICE = 0x09;
 const ACTION_TIMEOUT = 0x0a;
+const ACTION_FLASH_ERASE_FAILURE = 0x0b;
+const ACTION_FLASH_WRITE_FAILURE = 0x0c;
+const ACTION_FLASH_FINISH_FAILURE = 0x0d;
 
 const { error, error_p, make_error } = koovdev_error(KOOVDEV_ACTION_ERROR, [
   ACTION_NO_ERROR
@@ -546,7 +549,10 @@ function koov_actions(board, action_timeout, selected_device) {
       'digital-read': {},
       'accelerometer-read': null,
       'bts01-reset': null,
-      'bts01-cmd': null
+      'bts01-cmd': null,
+      'flash-erase': null,
+      'flash-write': null,
+      'flash-finish': null
     },
     'port-settings': function(block, arg, cb) {
       const port_settings = block['port-settings'];
@@ -621,7 +627,10 @@ function koov_actions(board, action_timeout, selected_device) {
           }
         });
       });
-      ['accelerometer-read', 'bts01-reset', 'bts01-cmd'].forEach(type => {
+      [
+        'accelerometer-read', 'bts01-reset', 'bts01-cmd',
+        'flash-erase', 'flash-write', 'flash-finish',
+      ].forEach(type => {
         board.addListener(type, v => {
           const callback = this.callback[type];
           debug(type, v);
@@ -957,6 +966,80 @@ function koov_actions(board, action_timeout, selected_device) {
           }, cb);
         }
       });
+    },
+    'flash-write': function(block, arg, cb) {
+      const flash_cmd = (opts) => {
+        const { type, command, error_code, cont } = opts;
+        debug(`${type}`, command);
+        const cleanup = (err) => {
+          this.callback[type] = null;
+          return error(error_code, {
+            error: true,
+            msg: 'failed to write flash',
+            original_error: err
+          }, cb);
+        };
+        this.callback[type] = v => {
+          this.callback[type] = null;
+          debug(`${type}: done`, v);
+          v.error = false;
+          return cont(v);
+        };
+        board.transport.write(Buffer.from(command), (err) => {
+          if (err)
+            return cleanup(err);
+        });
+      };
+      const flash_erase = (cont) => {
+        return flash_cmd({
+          type: 'flash-erase',
+          command: [ START_SYSEX, 0x0e, 0x02, 0x08, END_SYSEX ],
+          error_code: ACTION_FLASH_ERASE_FAILURE,
+          cont: cont
+        });
+      };
+      const flash_write = (buffer, cont) => {
+        return flash_cmd({
+          type: 'flash-write',
+          command: buffer,
+          error_code: ACTION_FLASH_WRITE_FAILURE,
+          cont: cont
+        });
+      };
+      const flash_finish = () => {
+        return flash_cmd({
+          type: 'flash-finish',
+          command: [ START_SYSEX, 0x0e, 0x02, 0x09, END_SYSEX ],
+          error_code: ACTION_FLASH_FINISH_FAILURE,
+          cont: (v) => error(ACTION_NO_ERROR, v, cb)
+        });
+      };
+      const write = (data) => {
+        if (data.length === 0)
+          return flash_finish();
+
+        const maxlen = 50;
+        const length = data.length > maxlen ? maxlen : data.length;
+        const b = Buffer.from([
+          START_SYSEX, 0x0e, 0x02, 0x0a, length
+        ].concat(data.slice(0, length), END_SYSEX));
+        return flash_write(b, (v) => write(data.slice(length)));
+      };
+      const escape = (b) => {
+        debug('escape:', b);
+        return b.reduce((acc, x) => {
+	  if (x === 0) {
+	    acc.push(0);
+	    acc.push(0);
+          } else if (x === END_SYSEX) {
+	    acc.push(0);
+	    acc.push(1);
+	  } else
+	    acc.push(x);
+	  return acc;
+        }, []);
+      };
+      return flash_erase((v) => write(escape(Buffer.from(arg.data))));
     },
     'koov-reset': function(block, arg, cb) {
       debug('koov-reset', arg);
