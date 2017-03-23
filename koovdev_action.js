@@ -514,21 +514,37 @@ function koov_actions(board, action_timeout, selected_device) {
             this.pending_error = null;
             return finish(err);
           }
-          const timeoutId = setTimeout(() => {
-            return error(ACTION_TIMEOUT, {
-              msg: 'action timeout',
-              block: block
-            }, finish);
-          }, action_timeout);
+          const scheduleTimeout = () => {
+            return setTimeout(() => {
+              return error(ACTION_TIMEOUT, {
+                msg: 'action timeout',
+                block: block
+              }, finish);
+            }, action_timeout);
+          };
+          let timeoutId = scheduleTimeout();
+          const stopTimeout = () => {
+            clearTimeout(timeoutId);
+            timeoutId = null;
+          };
+          const extendTimeout = () => {
+            debug('extendTimeout:', timeoutId);
+            if (timeoutId) {
+              stopTimeout();
+              timeoutId = scheduleTimeout();
+              debug('extendTimeout: new timeoutId', timeoutId);
+            }
+          };
+          arg.extendTimeout = extendTimeout;
           try {
             return this[block.name](block, arg, (err) => {
               //debug('call finish: block callback', err, block);
-              clearTimeout(timeoutId);
+              stopTimeout();
               return finish(err);
             });
           } catch (e) {
             debug('call finish: exception', e);
-            clearTimeout(timeoutId);
+            stopTimeout();
             return error(ACTION_EXCEPTION, {
               msg: 'got unexpected exception',
               exception: e
@@ -1021,6 +1037,7 @@ function koov_actions(board, action_timeout, selected_device) {
         if (data.length === 0)
           return flash_finish();
 
+        arg.extendTimeout();
         const maxlen = 50;
         const length = data.length > maxlen ? maxlen : data.length;
         const b = Buffer.from([
