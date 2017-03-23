@@ -968,6 +968,8 @@ function koov_actions(board, action_timeout, selected_device) {
       });
     },
     'flash-write': function(block, arg, cb) {
+      const { data, progress } = arg;
+      let total = 0;
       const flash_cmd = (opts) => {
         const { type, command, error_code, cont } = opts;
         debug(`${type}`, command);
@@ -1015,6 +1017,7 @@ function koov_actions(board, action_timeout, selected_device) {
         });
       };
       const write = (data) => {
+	progress({ written: (total - data.length), total: total });
         if (data.length === 0)
           return flash_finish();
 
@@ -1039,7 +1042,11 @@ function koov_actions(board, action_timeout, selected_device) {
 	  return acc;
         }, []);
       };
-      return flash_erase((v) => write(escape(Buffer.from(arg.data))));
+      return flash_erase((v) => {
+        const b = escape(Buffer.from(data));
+        total = b.length;
+        return write(b)
+      });
     },
     'koov-reset': function(block, arg, cb) {
       debug('koov-reset', arg);
@@ -1165,9 +1172,13 @@ const open_firmata = (action, cb, opts) => {
           keep_alive();
         });
       }, opts.keep_alive_interval);
+      debug('keep_alive: set timeout');
     };
-    action.action['board-init'](null, null, callback);
-    keep_alive();
+    action.action['board-init'](null, null, (err) => {
+      if (!error_p(err))
+        keep_alive();
+      callback(err);
+    });
   });
   action.board = board;
   action.action = koov_actions(board, action_timeout, action.selected_device);
@@ -1230,14 +1241,18 @@ function Action(opts)
       });
     });
   };
-  this.close = function(cb) {
-    debug('action: close');
-    this.selected_device = null;
+  this.clear_keep_alive = function() {
+    debug('clear_keep_alive:', this.keepAliveId);
     if (this.keepAliveId) {
       debug('close: clear keep alive timer');
       clearTimeout(this.keepAliveId);
       this.keepAliveId = null;
     }
+  };
+  this.close = function(cb) {
+    debug('action: close');
+    this.selected_device = null;
+    this.clear_keep_alive();
     if (this.action)
       this.action.reset();
     return this.device.close(cb);
