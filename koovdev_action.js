@@ -556,7 +556,7 @@ function koov_actions(board, action_timeout, selected_device) {
           msg: `no such block ${block.name}`
         }, finish);
       };
-      push_action(block, arg, cb);
+      push_action(block, arg || {}, cb);
       return exec();
     },
     // callbacks by pin number.
