@@ -1173,6 +1173,250 @@ const open_firmata = (action, cb, opts) => {
     reportVersionTimeout: 0,
     //reportVersionTimeout: 5000,
     //samplingInterval: 10000
+    skipCapabilities: true,
+    analogPins: [ 0, 1, 2, 3, 4, 5 ], // we have six analog pins
+    pins: [
+      {
+        supportedModes: [ 0, 1, 2, 4, 11 ],
+        value: 0,
+        report: 1,
+        analogChannel: 24
+      },
+      {
+        supportedModes: [ 0, 1, 2, 4, 11 ],
+        value: 0,
+        report: 1,
+        analogChannel: 25
+      },
+      {
+        supportedModes: [ 0, 1, 2, 4, 11 ],
+        value: 0,
+        report: 1,
+        analogChannel: 26
+      },
+      {
+        supportedModes: [ 0, 1, 2, 4, 11 ],
+        value: 0,
+        report: 1,
+        analogChannel: 27
+      },
+      {
+        supportedModes: [ 0, 1, 2, 4, 11 ],
+        value: 0,
+        report: 1,
+        analogChannel: 28
+      },
+      {
+        supportedModes: [ 0, 1, 2, 4, 11 ],
+        value: 0,
+        report: 1,
+        analogChannel: 29
+      },
+      {
+        supportedModes: [],
+        value: 0,
+        report: 1,
+        analogChannel: 127
+      },
+      {
+        supportedModes: [],
+        value: 0,
+        report: 1,
+        analogChannel: 127
+      },
+      {
+        supportedModes: [ 0, 1, 4, 11 ],
+        value: 0,
+        report: 1,
+        analogChannel: 127
+      },
+      {
+        supportedModes: [ 0, 1, 4, 11 ],
+        value: 0,
+        report: 1,
+        analogChannel: 127
+      },
+      {
+        supportedModes: [ 0, 1, 3, 4, 11 ],
+        value: 0,
+        report: 1,
+        analogChannel: 127
+      },
+      {
+        supportedModes: [ 0, 1, 3, 4, 11 ],
+        value: 0,
+        report: 1,
+        analogChannel: 127
+      },
+      {
+        supportedModes: [ 0, 1, 3, 4, 11 ],
+        value: 0,
+        report: 1,
+        analogChannel: 127
+      },
+      {
+        supportedModes: [ 0, 1, 3, 4, 11 ],
+        value: 0,
+        report: 1,
+        analogChannel: 127
+      },
+      {
+        supportedModes: [ 0, 1, 3, 4, 11 ],
+        value: 0,
+        report: 1,
+        analogChannel: 127
+      },
+      {
+        supportedModes: [ 0, 1, 3, 4, 11 ],
+        value: 0,
+        report: 1,
+        analogChannel: 127
+      },
+      {
+        supportedModes: [ 0, 1, 3, 4, 6, 11 ],
+        value: 0,
+        report: 1,
+        analogChannel: 127
+      },
+      {
+        supportedModes: [ 0, 1, 3, 4, 6, 11 ],
+        value: 0,
+        report: 1,
+        analogChannel: 127
+      },
+      {
+        supportedModes: [ 0, 1, 3, 4, 11 ],
+        value: 0,
+        report: 1,
+        analogChannel: 127
+      },
+      {
+        supportedModes: [ 0, 1, 3, 4, 11 ],
+        value: 0,
+        report: 1,
+        analogChannel: 127
+      },
+      {
+        supportedModes: [ 0, 1, 3, 4, 11 ],
+        value: 0,
+        report: 1,
+        analogChannel: 127
+      },
+      {
+        supportedModes: [ 0, 1, 3, 4, 11 ],
+        value: 0,
+        report: 1,
+        analogChannel: 127
+      },
+      {
+        supportedModes: [],
+        value: 0,
+        report: 1,
+        analogChannel: 127
+      },
+      {
+        supportedModes: [],
+        value: 0,
+        report: 1,
+        analogChannel: 127
+      },
+      {
+        supportedModes: [],
+        value: 0,
+        report: 1,
+        analogChannel: 127
+      },
+      {
+        supportedModes: [],
+        value: 0,
+        report: 1,
+        analogChannel: 127
+      },
+      {
+        supportedModes: [ 0, 1, 4, 11 ],
+        value: 0,
+        report: 1,
+        analogChannel: 127
+      },
+      {
+        supportedModes: [],
+        value: 0,
+        report: 1,
+        analogChannel: 127
+      },
+      {
+        supportedModes: [ 0, 1, 4, 11 ],
+        value: 0,
+        report: 1,
+        analogChannel: 127
+      },
+      {
+        supportedModes: [ 0, 1, 4, 11 ],
+        value: 0,
+        report: 1,
+        analogChannel: 127
+      },
+      {
+        supportedModes: [],
+        value: 0,
+        report: 1,
+        analogChannel: 127
+      },
+      {
+        supportedModes: [],
+        value: 0,
+        report: 1,
+        analogChannel: 127
+      },
+      {
+        supportedModes: [],
+        value: 0,
+        report: 1,
+        analogChannel: 127
+      },
+      {
+        supportedModes: [],
+        value: 0,
+        report: 1,
+        analogChannel: 127
+      },
+      {
+        supportedModes: [],
+        value: 0,
+        report: 1,
+        analogChannel: 127
+      },
+      {
+        supportedModes: [],
+        value: 0,
+        report: 1,
+        analogChannel: 127
+      },
+      {
+        supportedModes: [],
+        value: 0,
+        report: 1,
+        analogChannel: 127
+      },
+      {
+        supportedModes: [],
+        value: 0,
+        report: 1,
+        analogChannel: 127
+      },
+      {
+        supportedModes: [ 0, 1, 4, 11 ],
+        value: 0,
+        report: 1,
+        analogChannel: 127
+      },
+      {
+        supportedModes: [ 0, 1, 4, 11 ],
+        value: 0,
+        report: 1,
+        analogChannel: 127
+      }
+    ]
   }, (err) => {
     debug('firmata open', err);
     if (err)
