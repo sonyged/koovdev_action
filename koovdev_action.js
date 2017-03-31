@@ -1047,12 +1047,13 @@ function koov_actions(board, action_timeout, selected_device) {
       };
       const escape = (b) => {
         debug('escape:', b);
+        const ESCAPE_CHAR = 0x7f;
         return b.reduce((acc, x) => {
-	  if (x === 0) {
-	    acc.push(0);
+	  if (x === ESCAPE_CHAR) {
+	    acc.push(ESCAPE_CHAR);
 	    acc.push(0);
           } else if (x === END_SYSEX) {
-	    acc.push(0);
+	    acc.push(ESCAPE_CHAR);
 	    acc.push(1);
 	  } else
 	    acc.push(x);
