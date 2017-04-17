@@ -321,14 +321,14 @@ const servomotor_synchronized_motion = (board, speed, degrees) => {
  */
 function koov_actions(board, action_timeout, selected_device) {
   const null_scaler = (value) => { return value; };
-  const analog_scaler = (value) => {
-    const in_min = 0;
-    const in_max = 1023;
+  const build_scaler = (in_min, in_max) => (value) => {
     const out_min = 0;
     const out_max = 100;
     return (value - in_min) * (out_max - out_min) /
       (in_max - in_min) + out_min;
   };
+  const analog_scaler = build_scaler(0, 1023);
+  const sound_scaler = build_scaler(0, 1023 * (3.3 - 1.5) / 3.3);
   var reporter = (type, enabler, initializer, scaler) => {
     return function(block, arg, cb) {
       const port = block.port;
@@ -351,10 +351,10 @@ function koov_actions(board, action_timeout, selected_device) {
       }
     };
   };
-  var analog_reporter = (initializer) => {
+  var analog_reporter = (initializer, scaler) => {
     return reporter('analog-read', (pin, on) => {
       board.reportAnalogPin(pin, on);
-    }, initializer, analog_scaler);
+    }, initializer, scaler);
   };
   var digital_reporter = (initializer) => {
     return reporter('digital-read', (pin, on) => {
@@ -891,13 +891,13 @@ function koov_actions(board, action_timeout, selected_device) {
     }),
     'ir-photo-reflector-value': analog_reporter(pin => {
       board.pinMode(pin, board.MODES.INPUT);
-    }),
+    }, analog_scaler),
     'light-sensor-value': analog_reporter(pin => {
       board.pinMode(pin, board.MODES.INPUT);
-    }),
+    }, analog_scaler),
     'sound-sensor-value': analog_reporter(pin => {
       board.pinMode(pin, board.MODES.INPUT);
-    }),
+    }, sound_scaler),
     '3-axis-digital-accelerometer-value': function(block, arg, cb) {
       const port = block.port;
       if (port === 'K0' || port === 'K1') {
