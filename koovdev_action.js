@@ -568,7 +568,8 @@ function koov_actions(board, action_timeout, selected_device) {
       'bts01-cmd': null,
       'flash-erase': null,
       'flash-write': null,
-      'flash-finish': null
+      'flash-finish': null,
+      'btpin': null
     },
     'port-settings': function(block, arg, cb) {
       const port_settings = block['port-settings'];
@@ -645,7 +646,7 @@ function koov_actions(board, action_timeout, selected_device) {
       });
       [
         'accelerometer-read', 'bts01-reset', 'bts01-cmd',
-        'flash-erase', 'flash-write', 'flash-finish',
+        'flash-erase', 'flash-write', 'flash-finish', 'btpin'
       ].forEach(type => {
         board.addListener(type, v => {
           const callback = this.callback[type];
@@ -1064,6 +1065,33 @@ function koov_actions(board, action_timeout, selected_device) {
         const b = escape(Buffer.from(data));
         total = b.length;
         return write(b)
+      });
+    },
+    'btpin': function(block, arg, cb) {
+      debug('btpin', arg);
+      const timeout = arg.timeout || 1000;
+      const cmd = Buffer.concat([
+        new Buffer([ START_SYSEX, 0x0e, 0x02, 0x0b ]),
+        new Buffer(arg.command),
+        new Buffer([END_SYSEX])
+      ]);
+      const type = 'btpin';
+      this.callback[type] = v => {
+        this.callback[type] = null;
+        debug(`${type}:`, v);
+        v.error = false;
+        return error(ACTION_NO_ERROR, v, cb);
+      };
+      board.transport.write(cmd, (err) => {
+        debug('board.transport.write callback: btpin:', err);
+        if (err) {
+          this.callback[type] = null;
+          return error(ACTION_BTS01CMD_FAILURE, {
+            error: true,
+            msg: 'failed to control ble module',
+            original_error: err
+          }, cb);
+        }
       });
     },
     'koov-reset': function(block, arg, cb) {
