@@ -162,6 +162,15 @@ const bts01_setname = (name) => {
   return bts01_cmd('bts01-cmd', `AT+CDN=${name}\r`);
 };
 
+const close = (done) => {
+  setTimeout(() => {
+    koovdev_action.close((err) => {
+      console.log('close', err);
+      done();
+    });
+  }, 200);
+};
+
 async.waterfall([
   (done) => {
     device.device_scan(done);
@@ -178,14 +187,17 @@ async.waterfall([
   btpin_verify(1234),
   btpin_verify(1235),
   btpin_exists,
-  (done) => {
-    setTimeout(() => {
-      koovdev_action.close((err) => {
-        console.log('close', err);
-        done();
-      });
-    }, 200);
-  }
+  close,
+  device_select,
+  (dev, done) => {
+    koovdev_action.open(dev, {
+      callback: done,
+      btpin: 1234
+    });
+  },
+  firmata_name,
+  firmata_version,
+  close
 ], (err, result) => {
   console.log('all done', err, result);
   process.exit(0);

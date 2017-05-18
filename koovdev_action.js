@@ -1203,6 +1203,7 @@ const open_firmata = (action, cb, opts) => {
     //reportVersionTimeout: 5000,
     //samplingInterval: 10000
     skipCapabilities: true,
+    btpin: opts.btpin,
     analogPins: [ 0, 1, 2, 3, 4, 5 ], // we have six analog pins
     pins: [
       {
@@ -1507,8 +1508,14 @@ function Action(opts)
     if (err)
       termiate_device();
   };
-  this.open = function(name, cb) {
+  this.open = function(name, open_opts) {
     debug('action: open', name);
+
+    if (typeof open_opts === 'function') {
+      open_opts = { callback: open_opts };
+    }
+    const cb = open_opts.callback;
+
     if (!this.device)
       return error(ACTION_NO_DEVICE, { msg: 'no device found' }, cb);
     this.selected_device = name;
@@ -1527,7 +1534,8 @@ function Action(opts)
         open_firmata_timeout: opts.open_firmata_timeout || 10000,
         keep_alive_interval: opts.keep_alive_interval || 5 * 1000,
         action_timeout: opts.action_timeout || 60 * 1000,
-        dcmotor_correction: opts.dcmotor_correction
+        dcmotor_correction: opts.dcmotor_correction,
+        btpin: open_opts.btpin
       });
     });
   };
