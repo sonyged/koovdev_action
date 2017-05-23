@@ -122,9 +122,11 @@ let selected_device = null;
 const device_select = (done) => {
   device.list((list) => {
     console.log(list);
+//    const uuid = '33c493e7cced46f89b48fc1db7ae8157';
+//    const uuid = '8d8c74220dd946fdb817c8d8df509897';
+//    const uuid = '87eda7a823dd4ae78fe8daa72d5ea89b';
     const dev = list.find(x => x.type === 'usb');
-    //const dev = list.find(x => x.uuid === '33c493e7cced46f89b48fc1db7ae8157');
-    //const dev = list.find(x => x.uuid === '8d8c74220dd946fdb817c8d8df509897');
+//    const dev = list.find(x => x.uuid === uuid);
     if (!dev)
       return done('no device');
     selected_device = dev;

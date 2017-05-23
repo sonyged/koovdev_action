@@ -21,6 +21,10 @@ const ACTION_TIMEOUT = 0x0a;
 const ACTION_FLASH_ERASE_FAILURE = 0x0b;
 const ACTION_FLASH_WRITE_FAILURE = 0x0c;
 const ACTION_FLASH_FINISH_FAILURE = 0x0d;
+const ACTION_BTPIN_FAILURE = 0x0e;
+
+const ACTION_BTPIN_PROBE = 0x3ffd;
+const ACTION_BTPIN_NULL = 0x3ffe;
 
 const { error, error_p, make_error } = koovdev_error(KOOVDEV_ACTION_ERROR, [
   ACTION_NO_ERROR
@@ -1203,7 +1207,7 @@ const open_firmata = (action, cb, opts) => {
     //reportVersionTimeout: 5000,
     //samplingInterval: 10000
     skipCapabilities: true,
-    btpin: opts.btpin,
+    btpin: opts.btpin || ACTION_BTPIN_NULL,
     analogPins: [ 0, 1, 2, 3, 4, 5 ], // we have six analog pins
     pins: [
       {
@@ -1451,6 +1455,8 @@ const open_firmata = (action, cb, opts) => {
     debug('firmata open', err);
     if (err)
       return error(ACTION_OPEN_FIRMATA_FAILURE, err, callback);
+    if (!board.firmware.name)
+      return error(ACTION_BTPIN_FAILURE, { msg: 'btpin failure' }, callback);
     const keep_alive = () => {
       action.keepAliveId = setTimeout(() => {
         if (!action.device) {
@@ -1482,6 +1488,10 @@ function Action(opts)
   this.keepAliveId = null;
   this.device = opts.device;
   this.selected_device = null;
+
+  this.BTPIN_PROBE = ACTION_BTPIN_PROBE;
+  this.BTPIN_NULL = ACTION_BTPIN_NULL;
+
   if (opts.debug)
     debug = opts.debug;
   const termiate_device = () => {
