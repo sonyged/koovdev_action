@@ -22,6 +22,9 @@ const ACTION_FLASH_ERASE_FAILURE = 0x0b;
 const ACTION_FLASH_WRITE_FAILURE = 0x0c;
 const ACTION_FLASH_FINISH_FAILURE = 0x0d;
 const ACTION_BTPIN_FAILURE = 0x0e;
+const ACTION_FIRMATA_VERSION_MISMATCH = 0x0f;
+
+const ACTION_REQUIRED_FIRMATA_VERSION = 3; // required firmata major version
 
 const ACTION_BTPIN_PROBE = 0x3ffd;
 const ACTION_BTPIN_NULL = 0x3ffe;
@@ -1180,9 +1183,17 @@ const open_firmata = (action, cb, opts) => {
     clearTimeout(timeoutId);
     return cb(err);
   };
+  const version_mismatch = (version) => {
+    return version && version.major != ACTION_REQUIRED_FIRMATA_VERSION;
+  };
   const timeoutId = setTimeout(() => {
-    return error(ACTION_OPEN_FIRMATA_TIMEDOUT, {
-      msg: 'failed to open firmata'
+    const version = board.version;
+    const error_code = version_mismatch(version) ?
+          ACTION_FIRMATA_VERSION_MISMATCH :
+          ACTION_OPEN_FIRMATA_TIMEDOUT;
+    return error(error_code, {
+      msg: 'failed to open firmata',
+      version: version
     }, callback);
   }, opts.open_firmata_timeout);
   const firmata = require('firmata');
@@ -1457,6 +1468,12 @@ const open_firmata = (action, cb, opts) => {
       return error(ACTION_OPEN_FIRMATA_FAILURE, err, callback);
     if (!board.firmware.name)
       return error(ACTION_BTPIN_FAILURE, { msg: 'btpin failure' }, callback);
+    const version = board.version;
+    if (version_mismatch(version))
+      return error(ACTION_FIRMATA_VERSION_MISMATCH, {
+        msg: 'failed to open firmata',
+        version: version
+      }, callback);
     const keep_alive = () => {
       action.keepAliveId = setTimeout(() => {
         if (!action.device) {
