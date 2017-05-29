@@ -818,7 +818,7 @@ function koov_actions(board, action_timeout, selected_device) {
         };
         return loop();
       };
-      if (arg) {
+      if (arg.speed) {
         var v = arg;
         debug('servomotor-synchronized-motion[after]: ', v,
               SERVOMOTOR_STATE.expected_degree);
