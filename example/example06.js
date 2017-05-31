@@ -119,18 +119,28 @@ const flash_write = (done) => {
 
 let selected_device = null;
 const device_select = (done) => {
-  device.list((list) => {
-    console.log(list);
-//    const uuid = '33c493e7cced46f89b48fc1db7ae8157';
-//    const uuid = '8d8c74220dd946fdb817c8d8df509897';
-    const uuid = '87eda7a823dd4ae78fe8daa72d5ea89b';
-//    const dev = list.find(x => x.type === 'usb');
-    const dev = list.find(x => x.uuid === uuid);
-    if (!dev)
-      return done('no device');
-    selected_device = dev;
-    return done(null, dev);
-  });
+  let count = 3;
+  const rescan = device_scan(500);
+  const rec = () => {
+    device.list((list) => {
+      console.log(list);
+      //    const uuid = '33c493e7cced46f89b48fc1db7ae8157';
+      //    const uuid = '8d8c74220dd946fdb817c8d8df509897';
+      const uuid = '87eda7a823dd4ae78fe8daa72d5ea89b';
+      //    const dev = list.find(x => x.type === 'usb');
+      const dev = list.find(x => x.uuid === uuid);
+      if (!dev) {
+        if (count-- > 0) {
+          console.log('retry');
+          return rescan(rec);
+        }
+        return done('no device');
+      }
+      selected_device = dev;
+      return done(null, dev);
+    });
+  };
+  return rec();
 };
 
 const bts01_cmd = (name, command) => {
@@ -140,7 +150,7 @@ const bts01_cmd = (name, command) => {
       timeout: 1000,
       command: command
     }, (v) => {
-      console.log(`error =>`, v.error);
+      console.log(`error =>`, v);
       if (!v.error) {
         const s = new Buffer(v.buffer).toString();
         console.log(JSON.stringify(s));
@@ -159,7 +169,7 @@ const bts01_cmd = (name, command) => {
 
 //const bts01_reset = bts01_cmd('bts01-reset',
 //                              'AT+RVN\rAT+CCP=0008,0008,0001,0190\r');
-const bts01_reset = bts01_cmd('bts01-reset', 'AT+CDN=T4_DEF\r');
+const bts01_reset = bts01_cmd('bts01-reset', 'AT+CDN=T4_XYZ\r');
 const bts01_getname = bts01_cmd('bts01-cmd', 'AT+CDN\r');
 const bts01_setname = (name) => {
   return bts01_cmd('bts01-cmd', `AT+CDN=${name}\r`);
@@ -174,26 +184,33 @@ const close = (done) => {
   }, 200);
 };
 
+const device_scan = (wait) => {
+  return (done) => {
+    setTimeout(() => {
+      device.device_scan(done);
+    }, wait);
+  };
+};
+const device_open = (dev, done) => {
+  koovdev_action.open(dev, {
+    callback: done,
+    // btpin: 1234
+  });
+};
+
 async.waterfall([
-  (done) => {
-    device.device_scan(done);
-  },
+  device_scan(0),
   device_select,
-  (dev, done) => {
-    koovdev_action.open(dev, done);
-  },
+  device_open,
   bts01_reset,
   close,
-  (done) => {
-    device.device_scan(done);
-  },
+  device_scan(500),
   device_select,
-  (dev, done) => {
-    koovdev_action.open(dev, {
-      callback: done,
-//      btpin: 1234
-    });
-  },
+  device_open,
+  close,
+  device_scan(500),
+  device_select,
+  device_open,
   firmata_name,
   firmata_version,
   close
