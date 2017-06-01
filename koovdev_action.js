@@ -1085,7 +1085,11 @@ function koov_actions(board, action_timeout, selected_device) {
       const type = 'btpin';
       this.callback[type] = v => {
         this.callback[type] = null;
-        debug(`${type}:`, v);
+        debug(`${type}: callback`, v);
+        if (v.buffer[1] !== 0) {
+          v.error = true;
+          return error(ACTION_BTPIN_FAILURE, v, cb);
+        }
         v.error = false;
         return error(ACTION_NO_ERROR, v, cb);
       };
