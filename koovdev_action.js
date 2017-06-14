@@ -1188,7 +1188,8 @@ const open_firmata = (action, cb, opts) => {
     return cb(err);
   };
   const version_mismatch = (version) => {
-    return version && version.major != ACTION_REQUIRED_FIRMATA_VERSION;
+    const exists = version => version && version.major;
+    return exists(version) && version.major != ACTION_REQUIRED_FIRMATA_VERSION;
   };
   const timeoutId = setTimeout(() => {
     const version = board.version;
