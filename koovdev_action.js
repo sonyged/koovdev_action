@@ -1056,7 +1056,9 @@ function koov_actions(board, action_timeout, selected_device) {
       const escape = (b) => {
         debug('escape:', b);
         const ESCAPE_CHAR = 0x7f;
-        return b.reduce((acc, x) => {
+        // Convert from buffer to array since Buffer on iOS 9.3.5
+        // webkit doesn't implement reduce method.
+        return Array.prototype.slice.call(b, 0).reduce((acc, x) => {
 	  if (x === ESCAPE_CHAR) {
 	    acc.push(ESCAPE_CHAR);
 	    acc.push(0);
@@ -1069,7 +1071,7 @@ function koov_actions(board, action_timeout, selected_device) {
         }, []);
       };
       return flash_erase((v) => {
-        const b = escape(Buffer.from(data));
+        const b = escape(data);
         total = b.length;
         return write(b)
       });
