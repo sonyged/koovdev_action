@@ -292,12 +292,14 @@ const buzzer_off = (board, pin) => {
 const play_melody = (board, pin, melody, cb) => {
   debug(`buzzer-on (melody): pin: ${pin}`, melody);
   board.transport.write(new Buffer([
-    START_SYSEX, 0x0e, 0x02, 0x06, pin
+    START_SYSEX, 0x0e, 0x02, 0x0c
   ].concat(melody.slice(0, 28).reduce((acc, x) => {
+    const pin = KOOV_PORTS[x.port];
     const freq = to_integer(x.frequency);
     const tms = to_integer(x.secs * 1000 / 10);
     const valid_freq = freq => (48 <= freq && freq <= 108);
 
+    acc.push(pin);
     acc.push(((valid_freq(freq) ? freq - 47 : 0) << 1) | (tms > 0xff ? 1 : 0));
     acc.push((tms & 0xff) == END_SYSEX ? END_SYSEX + 1 : (tms & 0xff));
     return acc;
@@ -746,7 +748,8 @@ function koov_actions(board, action_timeout, selected_device) {
           return;
         }
         const start = Date.now();
-        const m = melody.slice(0, 20);
+        const maxseq = 13;
+        const m = melody.slice(0, maxseq);
         const delay = m.reduce((acc, x) => acc + x.secs * 1000, 0);
         debug(`melody ${start}: sending (total ${delay}ms)`, m);
         play_melody(board, pin, m, (err) => {
@@ -759,7 +762,7 @@ function koov_actions(board, action_timeout, selected_device) {
           const wait = start + delay - now;
           debug(`melody ${now}: sent (wait ${wait}ms)`, m);
           return setTimeout(() => {
-            return send(melody.slice(20));
+            return send(melody.slice(maxseq));
           }, wait > 0 ? wait : 0);
         });
       };
