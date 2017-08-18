@@ -289,17 +289,23 @@ const buzzer_off = (board, pin) => {
   ]));
 };
 
-const play_melody = (board, pin, melody, cb) => {
+const play_melody = (board, pin, melody, old, cb) => {
   debug(`buzzer-on (melody): pin: ${pin}`, melody);
   board.transport.write(new Buffer([
-    START_SYSEX, 0x0e, 0x02, 0x0c
-  ].concat(melody.slice(0, 28).reduce((acc, x) => {
-    const pin = KOOV_PORTS[x.port];
+    START_SYSEX, 0x0e, 0x02
+  ].concat(old ? [
+    0x06, pin
+  ] : [
+    0x0c
+  ]).concat(melody.slice(0, 28).reduce((acc, x) => {
     const freq = to_integer(x.frequency);
     const tms = to_integer(x.secs * 1000 / 10);
     const valid_freq = freq => (48 <= freq && freq <= 108);
 
-    acc.push(pin);
+    if (!old) {
+      const pin = KOOV_PORTS[x.port];
+      acc.push(pin);
+    }
     acc.push(((valid_freq(freq) ? freq - 47 : 0) << 1) | (tms > 0xff ? 1 : 0));
     acc.push((tms & 0xff) == END_SYSEX ? END_SYSEX + 1 : (tms & 0xff));
     return acc;
@@ -748,11 +754,46 @@ function koov_actions(board, action_timeout, selected_device) {
           return;
         }
         const start = Date.now();
+        const m = melody.slice(0, 20);
+        const delay = m.reduce((acc, x) => acc + x.secs * 1000, 0);
+        debug(`melody ${start}: sending (total ${delay}ms)`, m);
+        play_melody(board, pin, m, true, (err) => {
+          if (error_p(err)) {
+            if (!this.pending_error)
+              this.pending_error = err;
+            return;
+          }
+          const now = Date.now();
+          const wait = start + delay - now;
+          debug(`melody ${now}: sent (wait ${wait}ms)`, m);
+          return setTimeout(() => {
+            return send(melody.slice(20));
+          }, wait > 0 ? wait : 0);
+        });
+      };
+      send(arg.melody);
+      return cb(null);
+    },
+    /* melody action for koov-1.0.18 or later */
+    'melody.1': function(block, arg, cb) {
+      const pin = KOOV_PORTS[block.port];
+      if (typeof pin !== 'number')
+        return cb(null);
+      debug(`melody: pin ${pin}`, arg.melody);
+      this.stop_melody = false;
+      const send = (melody) => {
+        if (melody.length === 0)
+          return;
+        if (this.stop_melody) {
+          debug(`melody: stop requested`);
+          return;
+        }
+        const start = Date.now();
         const maxseq = 13;
         const m = melody.slice(0, maxseq);
         const delay = m.reduce((acc, x) => acc + x.secs * 1000, 0);
         debug(`melody ${start}: sending (total ${delay}ms)`, m);
-        play_melody(board, pin, m, (err) => {
+        play_melody(board, pin, m, false, (err) => {
           if (error_p(err)) {
             if (!this.pending_error)
               this.pending_error = err;
