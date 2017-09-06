@@ -443,11 +443,18 @@ function koov_actions(board, action_timeout, selected_device) {
     const pin = KOOV_PORTS[port];
     buzzer_off(board, pin);
   };
+  const init_multiled = port => {
+    ['LED_R', 'LED_G', 'LED_B', 'LED_FET'].forEach(x => {
+      board.pinMode(KOOV_PORTS[x], board.MODES.OUTPUT);
+      board.digitalWrite(KOOV_PORTS[x], board.HIGH);
+    });
+  };
   const initializer = {
     'output': low_output,
     'input': init_input,
 
     'led': low_output,
+    'multi-led': init_multiled,
     'dc-motor': init_dcmotor,
     'servo-motor': init_servo,
     'buzzer': init_buzzer,
@@ -586,6 +593,13 @@ function koov_actions(board, action_timeout, selected_device) {
       'flash-finish': null,
       'btpin': null
     },
+    'port-init': function(block, arg, cb) {
+      if (!initializer[block.type])
+        return error(ACTION_UNKNOWN_BLOCK, null, cb);
+
+      (initializer[block.type])(block.port);
+      return error(ACTION_NO_ERROR, null, cb);
+    },
     'port-settings': function(block, arg, cb) {
       const port_settings = block['port-settings'];
       /*
@@ -603,10 +617,7 @@ function koov_actions(board, action_timeout, selected_device) {
        */
       if (true) {
         debug(`setting multi-led`);
-        ['LED_R', 'LED_G', 'LED_B', 'LED_FET'].forEach(x => {
-          board.pinMode(KOOV_PORTS[x], board.MODES.OUTPUT);
-          board.digitalWrite(KOOV_PORTS[x], board.HIGH);
-        });
+        init_multiled('RGB');
       }
       ['V0', 'V1'].forEach(port => {
         if (port_settings[port])
