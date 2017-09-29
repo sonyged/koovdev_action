@@ -20,6 +20,8 @@ const koovdev_action = require('../koovdev_action.js').action({
 });
 
 let koovdev_device = require('koovdev_device');
+let serialport = require('serialport');
+let koovble = require('koovble').KoovBle;
 let server = device_proxy.server({
   listener: (from, handler) => {
     ipc.request[from] = (event, arg) => {
@@ -28,7 +30,10 @@ let server = device_proxy.server({
       }, arg);
     };
   },
-  device: koovdev_device.device()
+  device: koovdev_device.device({
+    serialport: serialport,
+    ble: koovble
+  })
 });
 
 const build_cmd = (cmd) => {

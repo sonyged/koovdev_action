@@ -19,6 +19,7 @@
     "device_proxy": "git+ssh://git@bitbucket.org/sonyged/device_proxy.git",
     "istanbul": "^0.4.5",
     "koovdev_device": "git+ssh://git@bitbucket.org/sonyged/koovdev_device.git",
+    "koovble": "git+ssh://git@bitbucket.org/sonyged/koovble.git",
     "mocha": "^3.3.0",
     "nodeunit": "^0.11.0",
     "should": "^11.2.1"
