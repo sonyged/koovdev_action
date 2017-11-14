@@ -1,6 +1,6 @@
 {
   "name": "koovdev_action",
-  "version": "1.0.263",
+  "version": "1.0.264",
   "description": "firmata action management",
   "main": "koovdev_action.js",
   "scripts": {
@@ -12,14 +12,14 @@
   "dependencies": {
     "debug": "^2.6.6",
     "firmata": "https://github.com/sonyged/firmata.js.git#koov",
-    "koovdev_error": "git+ssh://git@github.com/sonyged/koovdev_error.git"
+    "koovdev_error": "https://github.com/sonyged/koovdev_error.git"
   },
   "devDependencies": {
     "async": "^2.0.1",
-    "device_proxy": "git+ssh://git@github.com/sonyged/device_proxy.git",
+    "device_proxy": "https://github.com/sonyged/device_proxy.git",
     "istanbul": "^0.4.5",
-    "koovdev_device": "git+ssh://git@github.com/sonyged/koovdev_device.git",
-    "koovble": "git+ssh://git@github.com/sonyged/koovble.git",
+    "koovdev_device": "https://github.com/sonyged/koovdev_device.git",
+    "koovble": "https://github.com/sonyged/koovble.git",
     "mocha": "^3.3.0",
     "nodeunit": "^0.11.0",
     "should": "^11.2.1"
