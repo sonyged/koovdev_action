@@ -710,7 +710,6 @@ function koov_actions(board, action_timeout, selected_device) {
       var pin = KOOV_PORTS[block.port];
       if (typeof pin === 'number') {
         var on = block.mode === 'ON';
-        turn_fet(board, pin, on);
         board.digitalWrite(pin, on ? board.HIGH : board.LOW);
       }
     }),
