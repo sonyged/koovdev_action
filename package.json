@@ -11,15 +11,15 @@
   "license": "SEE LICENSE in ./LICENSE",
   "dependencies": {
     "debug": "^2.6.6",
-    "firmata": "https://github.com/sonyged/firmata.js.git#koov",
-    "koovdev_error": "https://github.com/sonyged/koovdev_error.git"
+    "firmata": "https://github.com/sonyged/firmata.js.git#970dceccd4fba0a896b8529fda8478ca4932b9ea",
+    "koovdev_error": "https://github.com/sonyged/koovdev_error.git#c2ba353f2bd4296a5a76de492968f5feba943df3"
   },
   "devDependencies": {
     "async": "^2.0.1",
-    "device_proxy": "https://github.com/sonyged/device_proxy.git",
+    "device_proxy": "https://github.com/sonyged/device_proxy.git#565741bcc0d600d43596583e1c676c8d1a5bad12",
     "istanbul": "^0.4.5",
-    "koovdev_device": "https://github.com/sonyged/koovdev_device.git",
-    "koovble": "https://github.com/sonyged/koovble.git",
+    "koovdev_device": "https://github.com/sonyged/koovdev_device.git#c61d2940c0707783ab5b912d0d3b90902086e08a",
+    "koovble": "https://github.com/sonyged/koovble.git#923e67df138e9f320d08a294237da32e49af24ea",
     "mocha": "^3.3.0",
     "nodeunit": "^0.11.0",
     "should": "^11.2.1"
