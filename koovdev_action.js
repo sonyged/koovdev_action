@@ -463,6 +463,7 @@ function koov_actions(board, action_timeout, selected_device) {
   };
   const init_buzzer = port => {
     const pin = KOOV_PORTS[port];
+    board.pinMode(pin, board.MODES.PWM);
     buzzer_off(board, pin);
   };
   const init_multiled = port => {
@@ -763,7 +764,7 @@ function koov_actions(board, action_timeout, selected_device) {
     'buzzer-on': noreply((block, arg) => {
       const pin = KOOV_PORTS[block.port];
       if (typeof pin === 'number') {
-        buzzer_on(board, pin, arg.frequency);
+        buzzer_on(board, pin, block.frequency);
       }
     }),
     'buzzer-off': noreply(block => {
