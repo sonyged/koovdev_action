@@ -1595,7 +1595,7 @@ function Action(opts)
 
   if (opts.debug)
     debug = opts.debug;
-  const termiate_device = () => {
+  const terminate_device = () => {
     if (!this.device)
       return;
     debug('terminating device');
@@ -1607,17 +1607,17 @@ function Action(opts)
   };
   const on_disconnect = () => {
     debug('action: disconnected', this.device);
-    termiate_device();
+    terminate_device();
   };
   const on_error = (err) => {
     debug('action: error', err);
     if (err)
-      termiate_device();
+      terminate_device();
   };
   const on_close = (err) => {
     debug('action: close', err);
     if (err)
-      termiate_device();
+      terminate_device();
   };
   this.open = function(name, open_opts) {
     debug('action: open', name);
