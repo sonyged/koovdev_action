@@ -1,6 +1,6 @@
 {
   "name": "koovdev_action",
-  "version": "1.0.266",
+  "version": "1.0.267",
   "description": "firmata action management",
   "main": "koovdev_action.js",
   "scripts": {
@@ -21,7 +21,11 @@
     "koovdev_device": "https://github.com/sonyged/koovdev_device.git#c61d2940c0707783ab5b912d0d3b90902086e08a",
     "koovble": "https://github.com/sonyged/koovble.git#9725c402d8ea77778f13acf3a2aa5e38a48ef5ab",
     "mocha": "^3.3.0",
+    "noble": "https://github.com/sonyged/noble.git#koov",
     "nodeunit": "^0.11.0",
+    "rewire": "latest",
+    "serialport": "https://github.com/sonyged/node-serialport.git#koov-1_0_4",
+    "sinon": "latest",
     "should": "^11.2.1"
   }
 }
