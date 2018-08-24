@@ -632,6 +632,7 @@ function koov_actions(board, action_timeout, selected_device) {
        */
       const reset_only = !!block['reset-only'];
       debug(`port-settings: reset_only: ${reset_only}`, port_settings);
+      SERVOMOTOR_STATE.synchronized = false;
       this.stop_melody = true;
       board.reset();
       /*
