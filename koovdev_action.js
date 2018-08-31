@@ -463,7 +463,6 @@ function koov_actions(board, action_timeout, selected_device) {
   };
   const init_buzzer = port => {
     const pin = KOOV_PORTS[port];
-    board.pinMode(pin, board.MODES.PWM);
     buzzer_off(board, pin);
   };
   const init_multiled = port => {
