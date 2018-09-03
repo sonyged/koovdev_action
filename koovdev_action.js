@@ -647,7 +647,7 @@ function koov_actions(board, action_timeout, selected_device) {
         if (port_settings[port])
           init_dcmotor(port);
       });
-      ['V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9'].forEach(port => {
+      const init_vport = port => {
         if (port_settings[port]) {
           debug(`setting port ${port}`);
           (initializer[port_settings[port]])(port);
@@ -656,7 +656,20 @@ function koov_actions(board, action_timeout, selected_device) {
             (initializer['output'])(port);
           }
         }
-      });
+      };
+      const vports = ['V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9'];
+      const port_is = part => port => port_settings[port] === part;
+      const complement = f => (...x) => !f(...x);
+      /*
+       * Initialize buzzer ports first, then initialize the rest.
+       * The board.pinMode(pin, board.MODES.PWM) call in init_buzzer
+       * changes the frequency of GCLK3 to 48MHz while buzzer and
+       * servo motor requires it to be 8MHz.  init_servo() will set it
+       * to back to 8MHz and each buzzer operation also sets it to
+       * 8MHz.
+       */
+      vports.filter(port_is('buzzer')).forEach(init_vport);
+      vports.filter(complement(port_is('buzzer'))).forEach(init_vport);
       ['K2', 'K3', 'K4', 'K5', 'K6', 'K7'].forEach(port => {
         if (reset_only)
           return;
