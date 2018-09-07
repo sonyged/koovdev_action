@@ -763,7 +763,7 @@ function koov_actions(board, action_timeout, selected_device) {
     'buzzer-on': noreply((block, arg) => {
       const pin = KOOV_PORTS[block.port];
       if (typeof pin === 'number') {
-        buzzer_on(board, pin, block.frequency);
+        buzzer_on(board, pin, arg.frequency);
       }
     }),
     'buzzer-off': noreply(block => {
