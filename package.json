@@ -1,6 +1,6 @@
 {
   "name": "koovdev_action",
-  "version": "1.0.269",
+  "version": "1.0.270",
   "description": "firmata action management",
   "main": "koovdev_action.js",
   "scripts": {
