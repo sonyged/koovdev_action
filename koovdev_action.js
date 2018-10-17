@@ -150,32 +150,32 @@ const RPM_TABLE = {
   NORMAL: [
     { power: 0, rpm: 0 },
     { power: 10, rpm: 0 },
-    { power: 20, rpm: 0 },
-    { power: 30, rpm: 22.5 },
-    { power: 40, rpm: 35.4 },
-    { power: 50, rpm: 45.7 },
-    { power: 60, rpm: 58.2 },
-    { power: 70, rpm: 65.8 },
-    { power: 80, rpm: 68.2 },
-    { power: 90, rpm: 69.7 },
-    { power: 100, rpm: 71.2 },
+    { power: 20, rpm: 10.44 },
+    { power: 30, rpm: 25.51 },
+    { power: 40, rpm: 35.60 },
+    { power: 50, rpm: 45.32 },
+    { power: 60, rpm: 49.12 },
+    { power: 70, rpm: 53.19 },
+    { power: 80, rpm: 56.02 },
+    { power: 90, rpm: 58.43 },
+    { power: 100, rpm: 60.05 },
   ],
   REVERSE: [
     { power: 0, rpm: 0 },
     { power: 10, rpm: 0 },
-    { power: 20, rpm: 3.8 },
-    { power: 30, rpm: 8.3 },
-    { power: 40, rpm: 15.2 },
-    { power: 50, rpm: 19.2 },
-    { power: 60, rpm: 29.9 },
-    { power: 70, rpm: 48.6 },
-    { power: 80, rpm: 58.5 },
-    { power: 90, rpm: 65.5 },
-    { power: 100, rpm: 71.3 },
+    { power: 20, rpm: 6.34 },
+    { power: 30, rpm: 17.78 },
+    { power: 40, rpm: 22.87 },
+    { power: 50, rpm: 23.89 },
+    { power: 60, rpm: 29.54 },
+    { power: 70, rpm: 35.46 },
+    { power: 80, rpm: 43.94 },
+    { power: 90, rpm: 52.59 },
+    { power: 100, rpm: 60.32 },
   ]
 };
-const DCMOTOR_RPM_MAX = 70;
-const DCMOTOR_RPM_MIN = 25;
+const DCMOTOR_RPM_MAX = 60;
+const DCMOTOR_RPM_MIN = 20;
 const DCMOTOR_POWER_SWITCH = 10;
 const DCMOTOR_INITIAL_POWER = 30;
 
