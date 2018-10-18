@@ -150,32 +150,32 @@ const RPM_TABLE = {
   NORMAL: [
     { power: 0, rpm: 0 },
     { power: 10, rpm: 0 },
-    { power: 20, rpm: 0 },
-    { power: 30, rpm: 22.5 },
-    { power: 40, rpm: 35.4 },
-    { power: 50, rpm: 45.7 },
-    { power: 60, rpm: 58.2 },
-    { power: 70, rpm: 65.8 },
-    { power: 80, rpm: 68.2 },
-    { power: 90, rpm: 69.7 },
-    { power: 100, rpm: 71.2 },
+    { power: 20, rpm: 10.44 },
+    { power: 30, rpm: 25.51 },
+    { power: 40, rpm: 35.60 },
+    { power: 50, rpm: 45.32 },
+    { power: 60, rpm: 49.12 },
+    { power: 70, rpm: 53.19 },
+    { power: 80, rpm: 56.02 },
+    { power: 90, rpm: 58.43 },
+    { power: 100, rpm: 60.05 },
   ],
   REVERSE: [
     { power: 0, rpm: 0 },
     { power: 10, rpm: 0 },
-    { power: 20, rpm: 3.8 },
-    { power: 30, rpm: 8.3 },
-    { power: 40, rpm: 15.2 },
-    { power: 50, rpm: 19.2 },
-    { power: 60, rpm: 29.9 },
-    { power: 70, rpm: 48.6 },
-    { power: 80, rpm: 58.5 },
-    { power: 90, rpm: 65.5 },
-    { power: 100, rpm: 71.3 },
+    { power: 20, rpm: 6.34 },
+    { power: 30, rpm: 17.78 },
+    { power: 40, rpm: 22.87 },
+    { power: 50, rpm: 23.89 },
+    { power: 60, rpm: 29.54 },
+    { power: 70, rpm: 35.46 },
+    { power: 80, rpm: 43.94 },
+    { power: 90, rpm: 52.59 },
+    { power: 100, rpm: 60.32 },
   ]
 };
-const DCMOTOR_RPM_MAX = 70;
-const DCMOTOR_RPM_MIN = 25;
+const DCMOTOR_RPM_MAX = 60;
+const DCMOTOR_RPM_MIN = 20;
 const DCMOTOR_POWER_SWITCH = 10;
 const DCMOTOR_INITIAL_POWER = 30;
 
@@ -211,8 +211,8 @@ const dcmotor_correct = (power, direction) => {
  */
 const analogMax = 255;
 let DCMOTOR_STATE = [
-  { port: 'V0', power: DCMOTOR_INITIAL_POWER, mode: 'COAST' },
-  { port: 'V1', power: DCMOTOR_INITIAL_POWER, mode: 'COAST' }
+  { port: 'V0', power: DCMOTOR_INITIAL_POWER, mode: 'COAST', scale: 1 },
+  { port: 'V1', power: DCMOTOR_INITIAL_POWER, mode: 'COAST', scale: 1 }
 ];
 const DCMOTOR_MODE = {
   NORMAL: (board, pins, power) => {
@@ -258,7 +258,7 @@ function dcmotor_control(board, port, power, mode) {
     if (mode !== null)
       dm.mode = mode;
     debug(`dcmotor_control: pin: ${pins} power ${dm.power}`);
-    DCMOTOR_MODE[dm.mode](board, pins, dm.power);
+    DCMOTOR_MODE[dm.mode](board, pins, dm.power * dm.scale);
   }
 }
 function dcmotor_power(board, port, power) {
@@ -280,11 +280,14 @@ let SERVOMOTOR_STATE = {
 };
 let SERVOMOTOR_DEGREE = {
 };
+const SERVOMOTOR_DRIFT = {
+};
 
 const servoWrite = (board, pin, degree) => {
   debug(`servoWrite: pin: ${pin}`, degree);
   SERVOMOTOR_DEGREE[pin] = degree;
-  board.servoWrite(pin, to_integer(degree));
+  degree += SERVOMOTOR_DRIFT[pin];
+  board.servoWrite(pin, to_integer(clamp(0, 180, degree)));
 };
 
 const servoRead = (board, pin) => {
@@ -439,14 +442,18 @@ function koov_actions(board, action_timeout, selected_device) {
     const pin = KOOV_PORTS[port];
     board.pinMode(pin, board.MODES.INPUT);
   };
-  const init_servo = port => {
+  const init_servo = (port, calib) => {
     const pin = KOOV_PORTS[port];
     debug(`init_servo: pin: ${pin} name: ${port}: servo`);
+    if (calib && typeof calib.drift === 'number')
+      SERVOMOTOR_DRIFT[pin] = calib.drift;
+    else
+      SERVOMOTOR_DRIFT[pin] = 0;
     //board.pinMode(pin, board.MODES.SERVO);
     board.servoConfig(pin, 500, 2500);
     servoWrite(board, pin, 90);
   };
-  const init_dcmotor = port => {
+  const init_dcmotor = (port, calib) => {
     debug(`init_dcmotor: port ${port}`);
     const dm = dcmotor_state(port);
     if (dm) {
@@ -454,6 +461,8 @@ function koov_actions(board, action_timeout, selected_device) {
       debug(`init_dcmotor: pins ${pins[0]} ${pins[1]}`);
       board.pinMode(pins[1], board.MODES.OUTPUT);
       board.pinMode(pins[0], board.MODES.PWM);
+      dm.scale = calib && typeof calib.scale === 'number' ? carib.scale : 1;
+      dm.scale = clamp(0, 1, dm.scale);
       dcmotor_control(board, port, DCMOTOR_INITIAL_POWER, 'COAST');
     }
   };
@@ -631,6 +640,13 @@ function koov_actions(board, action_timeout, selected_device) {
        * ports.
        */
       const reset_only = !!block['reset-only'];
+      const calib = port => {
+        if (typeof block['calibration'] !== 'object' ||
+            typeof block['calibration'][port] !== 'object' ||
+            typeof port_settings[port] !== 'string')
+          return null;
+        return block['calibration'][port][port_settings[port]];
+      };
       debug(`port-settings: reset_only: ${reset_only}`, port_settings);
       SERVOMOTOR_STATE.synchronized = false;
       this.stop_melody = true;
@@ -645,12 +661,12 @@ function koov_actions(board, action_timeout, selected_device) {
       }
       ['V0', 'V1'].forEach(port => {
         if (port_settings[port])
-          init_dcmotor(port);
+          init_dcmotor(port, calib(port));
       });
       const init_vport = port => {
         if (port_settings[port]) {
           debug(`setting port ${port}`);
-          (initializer[port_settings[port]])(port);
+          (initializer[port_settings[port]])(port, calib(port));
         } else {
           if (!reset_only) {
             (initializer['output'])(port);
