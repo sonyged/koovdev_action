@@ -461,7 +461,7 @@ function koov_actions(board, action_timeout, selected_device) {
       debug(`init_dcmotor: pins ${pins[0]} ${pins[1]}`);
       board.pinMode(pins[1], board.MODES.OUTPUT);
       board.pinMode(pins[0], board.MODES.PWM);
-      dm.scale = calib && typeof calib.scale === 'number' ? carib.scale : 1;
+      dm.scale = calib && typeof calib.scale === 'number' ? calib.scale : 1;
       dm.scale = clamp(0, 1, dm.scale);
       dcmotor_control(board, port, DCMOTOR_INITIAL_POWER, 'COAST');
     }
