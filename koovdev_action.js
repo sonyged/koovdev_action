@@ -442,18 +442,19 @@ function koov_actions(board, action_timeout, selected_device) {
     const pin = KOOV_PORTS[port];
     board.pinMode(pin, board.MODES.INPUT);
   };
-  const init_servo = (port, calib) => {
+  const init_servo = (port, params) => {
     const pin = KOOV_PORTS[port];
     debug(`init_servo: pin: ${pin} name: ${port}: servo`);
-    if (calib && typeof calib.drift === 'number')
-      SERVOMOTOR_DRIFT[pin] = calib.drift;
+    if (params && typeof params.drift === 'number')
+      SERVOMOTOR_DRIFT[pin] = params.drift;
     else
       SERVOMOTOR_DRIFT[pin] = 0;
     //board.pinMode(pin, board.MODES.SERVO);
     board.servoConfig(pin, 500, 2500);
-    servoWrite(board, pin, 90);
+    if (params && typeof params.degree === 'number')
+      servoWrite(board, pin, params.degree);
   };
-  const init_dcmotor = (port, calib) => {
+  const init_dcmotor = (port, params) => {
     debug(`init_dcmotor: port ${port}`);
     const dm = dcmotor_state(port);
     if (dm) {
@@ -461,7 +462,7 @@ function koov_actions(board, action_timeout, selected_device) {
       debug(`init_dcmotor: pins ${pins[0]} ${pins[1]}`);
       board.pinMode(pins[1], board.MODES.OUTPUT);
       board.pinMode(pins[0], board.MODES.PWM);
-      dm.scale = calib && typeof calib.scale === 'number' ? calib.scale : 1;
+      dm.scale = params && typeof params.scale === 'number' ? params.scale : 1;
       dm.scale = clamp(0, 1, dm.scale);
       dcmotor_control(board, port, DCMOTOR_INITIAL_POWER, 'COAST');
     }
@@ -640,12 +641,12 @@ function koov_actions(board, action_timeout, selected_device) {
        * ports.
        */
       const reset_only = !!block['reset-only'];
-      const calib = port => {
-        if (typeof block['calibration'] !== 'object' ||
-            typeof block['calibration'][port] !== 'object' ||
+      const params = port => {
+        if (typeof block['port-parameters'] !== 'object' ||
+            typeof block['port-parameters'][port] !== 'object' ||
             typeof port_settings[port] !== 'string')
           return null;
-        return block['calibration'][port][port_settings[port]];
+        return block['port-parameters'][port][port_settings[port]];
       };
       debug(`port-settings: reset_only: ${reset_only}`, port_settings);
       SERVOMOTOR_STATE.synchronized = false;
@@ -661,12 +662,12 @@ function koov_actions(board, action_timeout, selected_device) {
       }
       ['V0', 'V1'].forEach(port => {
         if (port_settings[port])
-          init_dcmotor(port, calib(port));
+          init_dcmotor(port, params(port));
       });
       const init_vport = port => {
         if (port_settings[port]) {
           debug(`setting port ${port}`);
-          (initializer[port_settings[port]])(port, calib(port));
+          (initializer[port_settings[port]])(port, params(port));
         } else {
           if (!reset_only) {
             (initializer['output'])(port);
