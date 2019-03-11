@@ -45,6 +45,7 @@ const ACTION_FLASH_WRITE_FAILURE = 0x0c;
 const ACTION_FLASH_FINISH_FAILURE = 0x0d;
 const ACTION_BTPIN_FAILURE = 0x0e;
 const ACTION_FIRMATA_VERSION_MISMATCH = 0x0f;
+const ACTION_LEDMATRIX_FAILURE = 0x10;
 
 const ACTION_REQUIRED_FIRMATA_VERSION = 3; // required firmata major version
 
@@ -487,6 +488,7 @@ function koov_actions(board, action_timeout, selected_device) {
     'input': init_input,
 
     'led': low_output,
+    'led-matrix': low_output,
     'multi-led': init_multiled,
     'dc-motor': init_dcmotor,
     'servo-motor': init_servo,
@@ -624,6 +626,7 @@ function koov_actions(board, action_timeout, selected_device) {
       'flash-erase': null,
       'flash-write': null,
       'flash-finish': null,
+      'led-matrix': null,
       'btpin': null
     },
     'port-init': function(block, arg, cb) {
@@ -726,7 +729,7 @@ function koov_actions(board, action_timeout, selected_device) {
       });
       [
         'accelerometer-read', 'bts01-reset', 'bts01-cmd',
-        'flash-erase', 'flash-write', 'flash-finish', 'btpin'
+        'flash-erase', 'flash-write', 'flash-finish', 'btpin', 'led-matrix'
       ].forEach(type => {
         board.addListener(type, v => {
           const callback = this.callback[type];
@@ -1210,6 +1213,39 @@ function koov_actions(board, action_timeout, selected_device) {
           return error(ACTION_BTS01CMD_FAILURE, {
             error: true,
             msg: 'failed to control ble module',
+            original_error: err
+          }, cb);
+        }
+      });
+    },
+    'led-matrix': function(block, arg, cb) {
+      debug('led-matrix', arg);
+      const pin = KOOV_PORTS[block.port];
+      const brightness = clamp(0, 100, 100 * arg.brightness);
+      const cmd = Buffer.concat([
+        new Buffer([ START_SYSEX, 0x0e, 0x02, 0x0d ]),
+        new Buffer([pin, brightness]),
+        new Buffer(arg.grb.map(x => clamp(0, 127, x))),
+        new Buffer([END_SYSEX])
+      ]);
+      const type = 'led-matrix';
+      this.callback[type] = v => {
+        this.callback[type] = null;
+        debug(`${type}: callback`, v);
+        if (v.buffer[0] !== 0) {
+          v.error = true;
+          return error(ACTION_LEDMATRIX_FAILURE, v, cb);
+        }
+        v.error = false;
+        return error(ACTION_NO_ERROR, v, cb);
+      };
+      board.transport.write(cmd, (err) => {
+        debug('board.transport.write callback: led-matrix:', err);
+        if (err) {
+          this.callback[type] = null;
+          return error(ACTION_LEDMATRIX_FAILURE, {
+            error: true,
+            msg: 'failed to control led matrix',
             original_error: err
           }, cb);
         }
