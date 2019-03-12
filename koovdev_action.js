@@ -349,7 +349,8 @@ const servomotor_synchronized_motion = (board, speed, degrees) => {
     const pin = KOOV_PORTS[port];
     if (typeof pin !== 'number')
       return acc;
-    return acc.concat(pin, clamp(0, 180, degrees[port]));
+    const degree = degrees[port] + SERVOMOTOR_DRIFT[pin];
+    return acc.concat(pin, clamp(0, 180, degree));
   }, []);
   board.transport.write(new Buffer([
     START_SYSEX, 0x0e, 0x02, 0x05, speed
