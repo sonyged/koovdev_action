@@ -1,6 +1,6 @@
 {
   "name": "koovdev_action",
-  "version": "1.0.280",
+  "version": "1.0.281",
   "description": "firmata action management",
   "main": "koovdev_action.js",
   "scripts": {
@@ -11,7 +11,7 @@
   "license": "SEE LICENSE in ./LICENSE",
   "dependencies": {
     "debug": "^2.6.6",
-    "firmata": "https://github.com/sonyged/firmata.js.git#90a40cc1033948020dc90a49838066d5d4825827",
+    "firmata": "https://github.com/sonyged/firmata.js.git#9f5e1dc0398d75a627a5f6502c8af5478d125cda",
     "koovdev_error": "https://github.com/sonyged/koovdev_error.git#c2ba353f2bd4296a5a76de492968f5feba943df3"
   },
   "devDependencies": {
