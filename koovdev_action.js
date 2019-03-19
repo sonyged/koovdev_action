@@ -1256,7 +1256,7 @@ function koov_actions(board, action_timeout, selected_device) {
         }
       });
     },
-    'ultrasonic-distance-sensor': function(block, arg, cb) {
+    'ultrasonic-distance-sensor-value': function(block, arg, cb) {
       debug('ultrasonic-distance-sensor', arg);
       const pin = KOOV_PORTS[block.port];
       const cmd = Buffer.concat([
