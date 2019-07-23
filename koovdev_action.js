@@ -45,6 +45,9 @@ const ACTION_FLASH_WRITE_FAILURE = 0x0c;
 const ACTION_FLASH_FINISH_FAILURE = 0x0d;
 const ACTION_BTPIN_FAILURE = 0x0e;
 const ACTION_FIRMATA_VERSION_MISMATCH = 0x0f;
+const ACTION_LEDMATRIX_FAILURE = 0x10;
+const ACTION_ULTRASONIC_DISTANCE_SENSOR_FAILURE = 0x11;
+const ACTION_COLOR_SENSOR_FAILURE = 0x12;
 
 const ACTION_REQUIRED_FIRMATA_VERSION = 3; // required firmata major version
 
@@ -468,8 +471,8 @@ function koov_actions(board, action_timeout, selected_device) {
       dcmotor_control(board, port, DCMOTOR_INITIAL_POWER, 'COAST');
     }
   };
-  const init_accel = port => {
-    debug(`init_accel: port ${port}`);
+  const init_i2c = port => {
+    debug(`init_i2c: port ${port}`);
     // XXX not yet implemented.
   };
   const init_buzzer = port => {
@@ -488,6 +491,7 @@ function koov_actions(board, action_timeout, selected_device) {
     'input': init_input,
 
     'led': low_output,
+    'led-matrix': low_output,
     'multi-led': init_multiled,
     'dc-motor': init_dcmotor,
     'servo-motor': init_servo,
@@ -496,7 +500,9 @@ function koov_actions(board, action_timeout, selected_device) {
     'touch-sensor': init_sensor,
     'sound-sensor': init_sensor,
     'ir-photo-reflector': init_sensor,
-    '3-axis-digital-accelerometer': init_accel,
+    '3-axis-digital-accelerometer': init_i2c,
+    'ultrasonic-distance-sensor': low_output,
+    'color-sensor': init_i2c,
     'push-button': init_button
   };
   const ack_device = (tag, board, cb) => {
@@ -625,6 +631,9 @@ function koov_actions(board, action_timeout, selected_device) {
       'flash-erase': null,
       'flash-write': null,
       'flash-finish': null,
+      'led-matrix': null,
+      'ultrasonic-distance-sensor': null,
+      'color-sensor': null,
       'btpin': null
     },
     'port-init': function(block, arg, cb) {
@@ -727,7 +736,8 @@ function koov_actions(board, action_timeout, selected_device) {
       });
       [
         'accelerometer-read', 'bts01-reset', 'bts01-cmd',
-        'flash-erase', 'flash-write', 'flash-finish', 'btpin'
+        'flash-erase', 'flash-write', 'flash-finish', 'btpin', 'led-matrix',
+        'ultrasonic-distance-sensor', 'color-sensor'
       ].forEach(type => {
         board.addListener(type, v => {
           const callback = this.callback[type];
@@ -1211,6 +1221,110 @@ function koov_actions(board, action_timeout, selected_device) {
           return error(ACTION_BTS01CMD_FAILURE, {
             error: true,
             msg: 'failed to control ble module',
+            original_error: err
+          }, cb);
+        }
+      });
+    },
+    'led-matrix': function(block, arg, cb) {
+      debug('led-matrix', arg);
+      const pin = KOOV_PORTS[block.port];
+      const brightness = clamp(0, 100, 100 * arg.brightness);
+      const cmd = Buffer.concat([
+        new Buffer([ START_SYSEX, 0x0e, 0x02, 0x0d ]),
+        new Buffer([pin, brightness]),
+        new Buffer(arg.grb.map(x => clamp(0, 127, x))),
+        new Buffer([END_SYSEX])
+      ]);
+      const type = 'led-matrix';
+      this.callback[type] = v => {
+        this.callback[type] = null;
+        debug(`${type}: callback`, v);
+        if (v.buffer[0] !== 0) {
+          v.error = true;
+          return error(ACTION_LEDMATRIX_FAILURE, v, cb);
+        }
+        v.error = false;
+        return error(ACTION_NO_ERROR, v, cb);
+      };
+      board.transport.write(cmd, (err) => {
+        debug('board.transport.write callback: led-matrix:', err);
+        if (err) {
+          this.callback[type] = null;
+          return error(ACTION_LEDMATRIX_FAILURE, {
+            error: true,
+            msg: 'failed to control led matrix',
+            original_error: err
+          }, cb);
+        }
+      });
+    },
+    'ultrasonic-distance-sensor-value': function(block, arg, cb) {
+      debug('ultrasonic-distance-sensor', arg);
+      const pin = KOOV_PORTS[block.port];
+      const cmd = Buffer.concat([
+        new Buffer([ START_SYSEX, 0x0e, 0x02, 0x0e, pin, END_SYSEX ])
+      ]);
+      const type = 'ultrasonic-distance-sensor';
+      this.callback[type] = v => {
+        this.callback[type] = null;
+        debug(`${type}: callback`, v);
+        if (v.buffer[0] !== 0 || v.buffer.length < 6) {
+          v.error = true;
+          return error(ACTION_ULTRASONIC_DISTANCE_SENSOR_FAILURE, v, cb);
+        }
+        v.error = false;
+        v.value = Buffer.from([
+          ((v.buffer[1] & 0b1111111) >> 0) | ((v.buffer[2] & 0x1) << 7),
+          ((v.buffer[2] & 0b1111110) >> 1) | ((v.buffer[3] & 0x3) << 6),
+          ((v.buffer[3] & 0b1111100) >> 2) | ((v.buffer[4] & 0x7) << 5),
+          ((v.buffer[4] & 0b1111000) >> 3) | ((v.buffer[5] & 0xf) << 4),
+        ]).readFloatLE(0);
+        return error(ACTION_NO_ERROR, v, cb);
+      };
+      board.transport.write(cmd, (err) => {
+        debug(`board.transport.write callback: ${type}:`, err);
+        if (err) {
+          this.callback[type] = null;
+          return error(ACTION_ULTRASONIC_DISTANCE_SENSOR_FAILURE, {
+            error: true,
+            msg: 'failed to control led matrix',
+            original_error: err
+          }, cb);
+        }
+      });
+    },
+    'color-sensor-value': function(block, arg, cb) {
+      debug('color-sensor', arg);
+      const pin = KOOV_PORTS[block.port];
+      const cmd = Buffer.concat([
+        new Buffer([ START_SYSEX, 0x0e, 0x02, 0x0f, END_SYSEX ])
+      ]);
+      const type = 'color-sensor';
+      this.callback[type] = v => {
+        this.callback[type] = null;
+        debug(`${type}: callback`, v);
+        if (v.buffer[0] !== 0 || v.buffer.length < 4) {
+          v.error = true;
+          return error(ACTION_ULTRASONIC_DISTANCE_SENSOR_FAILURE, v, cb);
+        }
+        v.error = false;
+        v.value = (() => {
+          if (block.component === 'r') return v.buffer[1] & 0x7f;
+          if (block.component === 'g') return v.buffer[2] & 0x7f;
+          if (block.component === 'b') return v.buffer[3] & 0x7f;
+          return 0;
+        })();
+        debug('color-sensor =>', v);
+        return error(ACTION_NO_ERROR, v, cb);
+      };
+      board.transport.write(cmd, (err) => {
+        debug(`board.transport.write callback: ${type}:`, err);
+        if (err) {
+          this.callback[type] = null;
+          return error(ACTION_ULTRASONIC_DISTANCE_SENSOR_FAILURE, {
+            error: true,
+            msg: 'failed to control led matrix',
             original_error: err
           }, cb);
         }

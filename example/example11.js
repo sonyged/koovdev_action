@@ -1,0 +1,282 @@
+/* -*- indent-tabs-mode: nil; js-indent-level: 2 -*-
+ */
+
+'use strict';
+let debug = require('debug')('test');
+const async = require('async');
+
+const device_proxy = require('device_proxy');
+let ipc = { request: {}, reply: {} };
+const opts = {
+  sender: (to, what) => { return ipc.request[to](to, what); },
+  listener: (to, cb) => {
+    ipc.reply[to] = (event, arg) => { return cb(arg); };
+  }
+};
+
+const device = device_proxy.client(opts);
+const koovdev_action = require('../koovdev_action.js').action({
+  device: device
+});
+
+let koovdev_device = require('koovdev_device');
+let serialport = require('serialport');
+let koovble = require('koovble').KoovBle;
+let server = device_proxy.server({
+  listener: (from, handler) => {
+    ipc.request[from] = (event, arg) => {
+      return handler((to, what) => {
+        return ipc.reply[to](to, what);
+      }, arg);
+    };
+  },
+  device: koovdev_device.device({
+    serialport: serialport,
+    ble: koovble
+  })
+});
+
+const build_cmd = (cmd) => {
+  return (done) => {
+    if (selected_device.type !== 'usb')
+      return done();
+    console.log(`bts01-cmd: ${cmd}`);
+    koovdev_action.action.action({ name: 'bts01-cmd' }, {
+      command: cmd
+    }, (v) => {
+      console.log(`error => `, v.error);
+      if (!v.error) {
+        const s = new Buffer(v.buffer).toString();
+        // console.log(s);
+        console.log(s.split(/[\r\n]/).reduce((acc, x) => {
+          if (x.length > 0)
+            acc.push(x);
+          return acc;
+        }, []).reverse());
+      }
+      done();
+    });
+  };
+};
+
+const firmata_version = (done) => {
+  console.log(`issue firmata-version`);
+  koovdev_action.action.action({ name: 'firmata-version' }, null, (v) => {
+    console.log(`firmata-version`, v);
+    done(v.error);
+  });
+};
+
+const firmata_name = (done) => {
+  console.log(`issue firmata-name`);
+  koovdev_action.action.action({ name: 'firmata-name' }, null, (v) => {
+    console.log(`firmata-name`, v);
+    done(v.error);
+  });
+};
+
+const wait = (secs) => {
+  return (done) => {
+    setTimeout(done, secs);
+  };
+};
+
+const turn_led = (port, mode) => {
+  return (done) => {
+    console.log(`issue turn-led ${port} ${mode}`);
+    koovdev_action.action.action({
+      name: 'turn-led', port, mode
+    }, null, (v) => {
+      console.log(`turn_led`, v);
+      done(v);
+    });
+  };
+};
+
+const led_matrix = (port, brightness, grb) => {
+  return (done) => {
+    console.log(`issue led-matrix ${port} ${brightness} ${grb}`);
+    koovdev_action.action.action({
+      name: 'led-matrix', port
+    }, {
+      brightness,
+      grb
+    }, (v) => {
+      console.log(`led-matrix`, v);
+      done(v.error);
+    });
+  };
+};
+
+const buzzer = (port, frequency) => {
+  return (done) => {
+    console.log(`issue buzzer ${port} ${frequency}`);
+    koovdev_action.action.action({
+      name: frequency ? 'buzzer-on' : 'buzzer-off', port, frequency
+    }, { frequency }, (v) => {
+      console.log(`buzzer`, v);
+      done(v);
+    });
+  };
+};
+
+const port_init = (port, type) => {
+  return (done) => {
+    console.log(`issue buzzer ${port} ${type}`);
+    koovdev_action.action.action({
+      name: 'port-init', port, type
+    }, null, (v) => {
+      console.log(`port-init`, v);
+      done(v);
+    });
+  };
+};
+
+const btpin_exists = (done) => {
+  console.log(`issue btpin-exists?`);
+  koovdev_action.action.action({ name: 'btpin' }, {
+    command: [ 0x02 ]
+  }, (v) => {
+    console.log(`btpin-exists?`, v);
+    done(v.error);
+  });
+};
+
+const btpin_write = (done) => {
+  console.log(`issue btpin-write`);
+  koovdev_action.action.action({ name: 'btpin' }, {
+    command: [ 0x00, 0x52, 0x09 ]
+  }, (v) => {
+    console.log(`btpin-write`, v);
+    done(v.error);
+  });
+};
+
+const btpin_verify = (btpin) => (done) => {
+  console.log(`issue btpin-verify ${btpin}`);
+  koovdev_action.action.action({ name: 'btpin' }, {
+    command: [ 0x01, btpin & 0x7f, ((btpin >> 7) & 0x7f) ]
+  }, (v) => {
+    console.log(`btpin-verify ${btpin}`, v);
+    done(v.error);
+  });
+};
+
+const flash_write = (done) => {
+  console.log(`issue flash write`);
+  const biltrans = '../../biltrans';
+  const bilbinary = require(`../../bilbinary/bilbinary`);
+  const scripts2 = require(`${biltrans}/example/rr_recorder.json`);
+  //const scripts2 = require(`${biltrans}/example/empty2.json`);
+  const trans = bilbinary.translator(scripts2);
+  koovdev_action.clear_keep_alive();
+  koovdev_action.action.action({ name: 'flash-write' }, {
+    data: trans.translate(),
+    progress: () => {},
+  }, (v) => {
+    console.log(`firmata-name`, v);
+    done(v.error);
+  });
+};
+
+let selected_device = null;
+const device_select = (done) => {
+  let count = 3;
+  const rescan = device_scan(5000);
+  const rec = () => {
+    device.list((list) => {
+      console.log(list);
+      //    const uuid = '33c493e7cced46f89b48fc1db7ae8157';
+      //    const uuid = '8d8c74220dd946fdb817c8d8df509897';
+      //    const uuid = '87eda7a823dd4ae78fe8daa72d5ea89b';
+      //    const uuid = '857458fd8af24df5a8265441ef49b2f5';
+      const dev = list.find(x => x.type === 'usb');
+      // const dev = list.find(x => x.uuid === uuid);
+      if (!dev) {
+        if (count-- > 0) {
+          console.log('retry');
+          return rescan(rec);
+        }
+        return done('no device');
+      }
+      selected_device = dev;
+      return done(null, dev);
+    });
+  };
+  return rec();
+};
+
+const bts01_cmd = (name, command) => {
+  return (done) => {
+    console.log(`issue bts01-cmd: ${JSON.stringify(command)}`);
+    koovdev_action.action.action({ name: name }, {
+      timeout: 1000,
+      command: command
+    }, (v) => {
+      console.log(`error =>`, v);
+      if (!v.error) {
+        const s = new Buffer(v.buffer).toString();
+        console.log(JSON.stringify(s));
+        done();
+      } else {
+        setTimeout(() => {
+          koovdev_action.close((err) => {
+            console.log('close', err);
+            koovdev_action.open(selected_device, done);
+          });
+        }, 100);
+      }
+    });
+  };
+};
+
+//const bts01_reset = bts01_cmd('bts01-reset',
+//                              'AT+RVN\rAT+CCP=0008,0008,0001,0190\r');
+const bts01_reset = bts01_cmd('bts01-reset', 'AT+CDN=T4_XYZ\r');
+const bts01_version = bts01_cmd('bts01-reset', 'AT+RVN\r');
+const bts01_getccp = bts01_cmd('bts01-cmd', 'AT+CCP\r');
+const bts01_setccp = bts01_cmd('bts01-cmd', 'AT+CCP=0010,0028,0001,0190\r');
+const bts01_getname = bts01_cmd('bts01-cmd', 'AT+CDN\r');
+const bts01_setname = (name) => {
+  return bts01_cmd('bts01-cmd', `AT+CDN=${name}\r`);
+};
+
+const close = (done) => {
+  setTimeout(() => {
+    koovdev_action.close((err) => {
+      console.log('close', err);
+      done();
+    });
+  }, 200);
+};
+
+const device_scan = (wait) => {
+  return (done) => {
+    setTimeout(() => {
+      device.device_scan(done, wait);
+    }, wait);
+  };
+};
+const device_open = (dev, done) => {
+  koovdev_action.open(dev, {
+    callback: done,
+    // btpin: 1234
+  });
+};
+
+async.waterfall([
+  device_scan(0),
+  device_select,
+  device_open,
+  port_init('V6', 'led-matrix'),
+  led_matrix('V6', 0.1, [ 127, 127, 127 ]),
+  wait(5000),
+  led_matrix('V6', 0.1, [ 0, 127, 0, 127, 0, 0, 0, 0, 127 ]),
+  wait(5000),
+  led_matrix('V6', 0.1, [ 0, 0, 0, 0, 0, 0, 0, 0, 0 ]),
+  wait(1000),
+  close,
+], (err, result) => {
+  console.log('all done', err, result);
+  process.exit(0);
+});
