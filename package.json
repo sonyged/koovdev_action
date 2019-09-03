@@ -19,7 +19,7 @@
     "device_proxy": "https://github.com/sonyged/device_proxy.git#565741bcc0d600d43596583e1c676c8d1a5bad12",
     "istanbul": "^0.4.5",
     "koovdev_device": "https://github.com/sonyged/koovdev_device.git#c61d2940c0707783ab5b912d0d3b90902086e08a",
-    "koovble": "https://github.com/sonyged/koovble.git#fb596eee49d11e06d2fe8a069c29c31a16945df7",
+    "koovble": "https://github.com/sonyged/koovble.git#889bdf822b3e546d1a47e57c1524afb7fce09fc3",
     "mocha": "^3.3.0",
     "noble": "https://github.com/sonyged/noble.git#4f89e9474b6986ebdff2f520c9bd9b247989ad35",
     "nodeunit": "^0.11.0",
