@@ -92,6 +92,7 @@ describe('turn_led', () => {
     const fn = promisify(action.action['turn-led']);
 
     assert.equal(await fn({
+      name: 'turn-led',
       port: 'V2',
       mode: 'ON'
     }, null), null);
@@ -99,6 +100,7 @@ describe('turn_led', () => {
     assert.deepEqual(board.digitalWrite.args[0], [10, 'HIGH']);
 
     assert.equal(await fn({
+      name: 'turn-led',
       port: 'V3',
       mode: 'OFF'
     }, null), null);
@@ -121,9 +123,9 @@ describe('dcmotor_control', () => {
     const turn_dcmotor_off = promisify(action.action['turn-dcmotor-off']);
 
     assert.equal(await set_dcmotor_power({
+      name: 'set-dcmotor-power',
       port: 'V0',
-      power: 100                // this value may be an expression
-                                // such as 1 + 2.
+      power: { name: 'plus', x: 40, y: 60 },
     }, {
       power: 100                // this is calculated value.
     }), null);
@@ -133,6 +135,7 @@ describe('dcmotor_control', () => {
     assert.deepEqual(board.analogWrite.args[0], [ 12, 0 ]);
 
     assert.equal(await turn_dcmotor_on({
+      name: 'turn-dcmotor-on',
       port: 'V0',
       direction: 'NORMAL'
     }, null ), null);
@@ -142,9 +145,9 @@ describe('dcmotor_control', () => {
     assert.deepEqual(board.analogWrite.args[1], [ 12, 254 ]);
 
     assert.equal(await set_dcmotor_power({
+      name: 'set-dcmotor-power',
       port: 'V0',
-      power: 50                 // this value may be an expression
-                                // such as 1 + 2.
+      power: { name: 'plus', x: 40, y: 10 }
     }, {
       power: 50                 // this is calculated value.
     }), null);
@@ -154,6 +157,7 @@ describe('dcmotor_control', () => {
     assert.deepEqual(board.analogWrite.args[2], [ 12, 107 ]);
 
     assert.equal(await turn_dcmotor_off({
+      name: 'turn-dcmotor-off',
       port: 'V0',
       mode: 'BRAKE'
     }, null ), null);
