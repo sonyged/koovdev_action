@@ -218,7 +218,7 @@ let DCMOTOR_STATE = [
   { port: 'V1', power: DCMOTOR_INITIAL_POWER, mode: 'COAST', scale: 1 }
 ];
 const DCMOTOR_MODE = {
-  NORMAL: (board, pins, power) => {
+  NORMAL: (board, pins, power, cb) => {
     board.digitalWrite(pins[1], board.LOW);
     if (power > 0) {
       const opower = power;
@@ -226,9 +226,13 @@ const DCMOTOR_MODE = {
       debug(`set-dcmotor-power/normal: ${opower} -> ${power}`);
       power = power * analogMax / 100;
     }
-    board.analogWrite(pins[0], to_integer(power));
+    board.analogWrite(pins[0], analogMax);
+    setTimeout(() => {
+      board.analogWrite(pins[0], to_integer(power));
+      return cb(null);
+    }, 20);
   },
-  REVERSE: (board, pins, power) => {
+  REVERSE: (board, pins, power, cb) => {
     board.digitalWrite(pins[1], board.HIGH);
     if (power > 0) {
       const opower = power;
@@ -236,15 +240,21 @@ const DCMOTOR_MODE = {
       debug(`set-dcmotor-power/reverse: ${opower} -> ${power}`);
       power = power * analogMax / 100;
     }
-    board.analogWrite(pins[0], analogMax - to_integer(power));
+    board.analogWrite(pins[0], analogMax - analogMax);
+    setTimeout(() => {
+      board.analogWrite(pins[0], analogMax - to_integer(power));
+      return cb(null);
+    }, 20);
   },
-  COAST: (board, pins, power) => {
+  COAST: (board, pins, power, cb) => {
     board.digitalWrite(pins[1], board.LOW);
     board.analogWrite(pins[0], 0);
+    return cb(null);
   },
-  BRAKE: (board, pins, power) => {
+  BRAKE: (board, pins, power, cb) => {
     board.digitalWrite(pins[1], board.HIGH);
     board.analogWrite(pins[0], analogMax);
+    return cb(null);
   }
 };
 
@@ -252,7 +262,7 @@ function dcmotor_state(port) {
   return DCMOTOR_STATE.find(x => { return x.port === port; });
 }
 
-function dcmotor_control(board, port, power, mode) {
+function dcmotor_control(board, port, power, mode, cb) {
   let dm = dcmotor_state(port);
   if (dm) {
     var pins = KOOV_PORTS[port];
@@ -261,15 +271,16 @@ function dcmotor_control(board, port, power, mode) {
     if (mode !== null)
       dm.mode = mode;
     debug(`dcmotor_control: pin: ${pins} power ${dm.power}`);
-    DCMOTOR_MODE[dm.mode](board, pins, dm.power * dm.scale);
-  }
+    return DCMOTOR_MODE[dm.mode](board, pins, dm.power * dm.scale, cb);
+  } else
+    return cb(null);
 }
-function dcmotor_power(board, port, power) {
+function dcmotor_power(board, port, power, cb) {
   power = clamp(0, 100, power);
-  dcmotor_control(board, port, power, null);
+  return dcmotor_control(board, port, power, null, cb);
 }
-function dcmotor_mode(board, port, mode) {
-  dcmotor_control(board, port, null, mode);
+function dcmotor_mode(board, port, mode, cb) {
+  return dcmotor_control(board, port, null, mode, cb);
 }
 
 /*
@@ -468,7 +479,7 @@ function koov_actions(board, action_timeout, selected_device) {
       board.pinMode(pins[0], board.MODES.PWM);
       dm.scale = params && typeof params.scale === 'number' ? params.scale : 1;
       dm.scale = clamp(0, 1, dm.scale);
-      dcmotor_control(board, port, DCMOTOR_INITIAL_POWER, 'COAST');
+      dcmotor_control(board, port, DCMOTOR_INITIAL_POWER, 'COAST', err => {});
     }
   };
   const init_i2c = port => {
@@ -1001,15 +1012,24 @@ function koov_actions(board, action_timeout, selected_device) {
         return error(ACTION_NO_ERROR, null, cb);
       });
     },
-    'set-dcmotor-power': noreply((block, arg) => {
-      dcmotor_power(board, block.port, arg.power);
-    }),
-    'turn-dcmotor-on': noreply(block => {
-      dcmotor_mode(board, block.port, block.direction);
-    }),
-    'turn-dcmotor-off': noreply(block => {
-      dcmotor_mode(board, block.port, block.mode);
-    }),
+    'set-dcmotor-power': (block, arg, cb) => (
+      dcmotor_power(
+        board, block.port, arg.power, err => error(ACTION_NO_ERROR, err, cb))
+    ),
+    'turn-dcmotor-on': (block, arg, cb) => (
+      dcmotor_mode(
+        board,
+        block.port,
+        block.direction,
+        err => error(ACTION_NO_ERROR, err, cb))
+    ),
+    'turn-dcmotor-off': (block, arg, cb) => (
+      dcmotor_mode(
+        board,
+        block.port,
+        block.mode,
+        err => error(ACTION_NO_ERROR, err, cb))
+    ),
     'button-value': digital_reporter(pin => {
       board.pinMode(pin, board.MODES.INPUT_PULLUP);
     }),
