@@ -226,11 +226,11 @@ const DCMOTOR_MODE = {
       debug(`set-dcmotor-power/normal: ${opower} -> ${power}`);
       power = power * analogMax / 100;
     }
-    board.analogWrite(pins[0], analogMax);
-    setTimeout(() => {
+//    board.analogWrite(pins[0], analogMax);
+//    setTimeout(() => {
       board.analogWrite(pins[0], to_integer(power));
       return cb(null);
-    }, 20);
+//    }, 20);
   },
   REVERSE: (board, pins, power, cb) => {
     board.digitalWrite(pins[1], board.HIGH);
@@ -240,11 +240,11 @@ const DCMOTOR_MODE = {
       debug(`set-dcmotor-power/reverse: ${opower} -> ${power}`);
       power = power * analogMax / 100;
     }
-    board.analogWrite(pins[0], analogMax - analogMax);
-    setTimeout(() => {
+//    board.analogWrite(pins[0], analogMax - analogMax);
+//    setTimeout(() => {
       board.analogWrite(pins[0], analogMax - to_integer(power));
       return cb(null);
-    }, 20);
+//    }, 20);
   },
   COAST: (board, pins, power, cb) => {
     board.digitalWrite(pins[1], board.LOW);
