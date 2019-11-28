@@ -242,7 +242,7 @@ const DCMOTOR_MODE = {
         dm.boost = false;
         boost = (cb) => {
           board.analogWrite(pins[0], analogMax);
-          setTimeout(cb, 10);
+          setTimeout(cb, 20);
         };
       }
     }
@@ -263,7 +263,7 @@ const DCMOTOR_MODE = {
         dm.boost = false;
         boost = (cb) => {
           board.analogWrite(pins[0], analogMax - analogMax);
-          setTimeout(cb, 10);
+          setTimeout(cb, 20);
         };
       }
     }
