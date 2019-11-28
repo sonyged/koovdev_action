@@ -214,44 +214,70 @@ const dcmotor_correct = (power, direction) => {
  */
 const analogMax = 255;
 let DCMOTOR_STATE = [
-  { port: 'V0', power: DCMOTOR_INITIAL_POWER, mode: 'COAST', scale: 1 },
-  { port: 'V1', power: DCMOTOR_INITIAL_POWER, mode: 'COAST', scale: 1 }
+  {
+    port: 'V0',
+    power: DCMOTOR_INITIAL_POWER,
+    mode: 'COAST',
+    scale: 1,
+    boost: true
+  },
+  {
+    port: 'V1',
+    power: DCMOTOR_INITIAL_POWER,
+    mode: 'COAST',
+    scale: 1,
+    boost: true
+  }
 ];
 const DCMOTOR_MODE = {
-  NORMAL: (board, pins, power, cb) => {
+  NORMAL: (board, pins, power, dm, cb) => {
+    let boost = (cb) => cb();
     board.digitalWrite(pins[1], board.LOW);
     if (power > 0) {
       const opower = power;
       power = dcmotor_correct(power, true);
       debug(`set-dcmotor-power/normal: ${opower} -> ${power}`);
       power = power * analogMax / 100;
+      if (dm.boost) {
+        dm.boost = false;
+        boost = (cb) => {
+          board.analogWrite(pins[0], analogMax);
+          setTimeout(cb, 10);
+        };
+      }
     }
-//    board.analogWrite(pins[0], analogMax);
-//    setTimeout(() => {
+    boost(() => {
       board.analogWrite(pins[0], to_integer(power));
       return cb(null);
-//    }, 20);
+    });
   },
-  REVERSE: (board, pins, power, cb) => {
+  REVERSE: (board, pins, power, dm, cb) => {
+    let boost = (cb) => cb();
     board.digitalWrite(pins[1], board.HIGH);
     if (power > 0) {
       const opower = power;
       power = dcmotor_correct(power, false);
       debug(`set-dcmotor-power/reverse: ${opower} -> ${power}`);
       power = power * analogMax / 100;
+      if (dm.boost) {
+        dm.boost = false;
+        boost = (cb) => {
+          board.analogWrite(pins[0], analogMax - analogMax);
+          setTimeout(cb, 10);
+        };
+      }
     }
-//    board.analogWrite(pins[0], analogMax - analogMax);
-//    setTimeout(() => {
+    boost(() => {
       board.analogWrite(pins[0], analogMax - to_integer(power));
       return cb(null);
-//    }, 20);
+    });
   },
-  COAST: (board, pins, power, cb) => {
+  COAST: (board, pins, power, dm, cb) => {
     board.digitalWrite(pins[1], board.LOW);
     board.analogWrite(pins[0], 0);
     return cb(null);
   },
-  BRAKE: (board, pins, power, cb) => {
+  BRAKE: (board, pins, power, dm, cb) => {
     board.digitalWrite(pins[1], board.HIGH);
     board.analogWrite(pins[0], analogMax);
     return cb(null);
@@ -266,12 +292,18 @@ function dcmotor_control(board, port, power, mode, cb) {
   let dm = dcmotor_state(port);
   if (dm) {
     var pins = KOOV_PORTS[port];
-    if (power !== null)
+    if (power !== null) {
+      if (dm.power === 0)
+        dm.boost = true;
       dm.power = power;
-    if (mode !== null)
+    }
+    if (mode !== null) {
+      if (dm.mode !== mode)
+        dm.boost = true;
       dm.mode = mode;
+    }
     debug(`dcmotor_control: pin: ${pins} power ${dm.power}`);
-    return DCMOTOR_MODE[dm.mode](board, pins, dm.power * dm.scale, cb);
+    return DCMOTOR_MODE[dm.mode](board, pins, dm.power * dm.scale, dm, cb);
   } else
     return cb(null);
 }
@@ -479,6 +511,7 @@ function koov_actions(board, action_timeout, selected_device) {
       board.pinMode(pins[0], board.MODES.PWM);
       dm.scale = params && typeof params.scale === 'number' ? params.scale : 1;
       dm.scale = clamp(0, 1, dm.scale);
+      dm.boost = true;
       dcmotor_control(board, port, DCMOTOR_INITIAL_POWER, 'COAST', err => {});
     }
   };
