@@ -241,12 +241,14 @@ const DCMOTOR_MODE = {
       if (dm.boost) {
         dm.boost = false;
         boost = (cb) => {
+          debug(`set-dcmotor-power/normal: a ${analogMax}`);
           board.analogWrite(pins[0], analogMax);
-          setTimeout(cb, 20);
+          setTimeout(cb, 100);
         };
       }
     }
     boost(() => {
+      debug(`set-dcmotor-power/normal: a ${to_integer(power)}`);
       board.analogWrite(pins[0], to_integer(power));
       return cb(null);
     });
@@ -262,12 +264,14 @@ const DCMOTOR_MODE = {
       if (dm.boost) {
         dm.boost = false;
         boost = (cb) => {
+          debug(`set-dcmotor-power/reverse: a ${analogMax - analogMax}`);
           board.analogWrite(pins[0], analogMax - analogMax);
-          setTimeout(cb, 20);
+          setTimeout(cb, 100);
         };
       }
     }
     boost(() => {
+      debug(`set-dcmotor-power/reverse: a ${analogMax - to_integer(power)}`);
       board.analogWrite(pins[0], analogMax - to_integer(power));
       return cb(null);
     });
