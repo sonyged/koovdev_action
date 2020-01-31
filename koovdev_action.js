@@ -1,7 +1,7 @@
 /* -*- indent-tabs-mode: nil; js-indent-level: 2 -*-
- * 
+ *
  * Copyright (c) 2017 Sony Global Education, Inc.
- * 
+ *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -9,10 +9,10 @@
  * modify, merge, publish, distribute, sublicense, and/or sell copies
  * of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -284,7 +284,7 @@ function dcmotor_mode(board, port, mode, cb) {
 }
 
 /*
- * Servomotor state management. 
+ * Servomotor state management.
  */
 let SERVOMOTOR_STATE = {
   synchronized: false,
@@ -1468,7 +1468,7 @@ const open_firmata = (action, cb, opts) => {
     //reportVersionTimeout: 5000,
     //samplingInterval: 10000
     skipCapabilities: true,
-    btpin: opts.btpin || ACTION_BTPIN_NULL,
+    btpin: Number.isInteger(opts.btpin) ? opts.btpin : ACTION_BTPIN_NULL,
     analogPins: [ 0, 1, 2, 3, 4, 5 ], // we have six analog pins
     pins: [
       {
