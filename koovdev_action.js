@@ -486,9 +486,14 @@ function koov_actions(board, action_timeout, selected_device) {
     debug(`init_i2c: port ${port}`);
     // XXX not yet implemented.
   };
-  const init_buzzer = port => {
+  const init_buzzer = (port, params) => {
     const pin = KOOV_PORTS[port];
+    const volume = params && typeof params['volume'] === 'number' ? params['volume'] : 1;
     board.pinMode(pin, board.MODES.PWM);
+
+    board.transport.write(new Buffer([
+      START_SYSEX, 0x0e, 0x03, pin, volume, END_SYSEX
+    ]));
     buzzer_off(board, pin);
   };
   const init_multiled = port => {
