@@ -141,8 +141,9 @@ describe('dcmotor_control', () => {
     }, null), null);
     assert.equal(board.digitalWrite.callCount, 2);
     assert.deepEqual(board.digitalWrite.args[1], [ 13, 'LOW' ]);
-    assert.equal(board.analogWrite.callCount, 2);
-    assert.deepEqual(board.analogWrite.args[1], [ 12, 254 ]);
+    assert.equal(board.analogWrite.callCount, 3);
+    assert.deepEqual(board.analogWrite.args[1], [ 12, 255 ]);
+    assert.deepEqual(board.analogWrite.args[2], [ 12, 254 ]);
 
     assert.equal(await set_dcmotor_power({
       name: 'set-dcmotor-power',
@@ -153,8 +154,8 @@ describe('dcmotor_control', () => {
     }), null);
     assert.equal(board.digitalWrite.callCount, 3);
     assert.deepEqual(board.digitalWrite.args[2], [ 13, 'LOW' ]);
-    assert.equal(board.analogWrite.callCount, 3);
-    assert.deepEqual(board.analogWrite.args[2], [ 12, 107 ]);
+    assert.equal(board.analogWrite.callCount, 4);
+    assert.deepEqual(board.analogWrite.args[3], [ 12, 107 ]);
 
     assert.equal(await turn_dcmotor_off({
       name: 'turn-dcmotor-off',
@@ -163,8 +164,8 @@ describe('dcmotor_control', () => {
     }, null), null);
     assert.equal(board.digitalWrite.callCount, 4);
     assert.deepEqual(board.digitalWrite.args[3], [ 13, 'HIGH' ]);
-    assert.equal(board.analogWrite.callCount, 4);
-    assert.deepEqual(board.analogWrite.args[3], [ 12, 255 ]);
+    assert.equal(board.analogWrite.callCount, 5);
+    assert.deepEqual(board.analogWrite.args[4], [ 12, 255 ]);
 
     assert.equal(await turn_dcmotor_on({
       name: 'turn-dcmotor-on',
@@ -173,8 +174,9 @@ describe('dcmotor_control', () => {
     }, null), null);
     assert.equal(board.digitalWrite.callCount, 5);
     assert.deepEqual(board.digitalWrite.args[4], [ 13, 'HIGH' ]);
-    assert.equal(board.analogWrite.callCount, 5);
-    assert.deepEqual(board.analogWrite.args[4], [ 12, 67 ]);
+    assert.equal(board.analogWrite.callCount, 7);
+    assert.deepEqual(board.analogWrite.args[5], [ 12, 0 ]);
+    assert.deepEqual(board.analogWrite.args[6], [ 12, 67 ]);
 
     assert.equal(await turn_dcmotor_off({
       name: 'turn-dcmotor-off',
@@ -183,8 +185,8 @@ describe('dcmotor_control', () => {
     }, null), null);
     assert.equal(board.digitalWrite.callCount, 6);
     assert.deepEqual(board.digitalWrite.args[5], [ 13, 'LOW' ]);
-    assert.equal(board.analogWrite.callCount, 6);
-    assert.deepEqual(board.analogWrite.args[5], [ 12, 0 ]);
+    assert.equal(board.analogWrite.callCount, 8);
+    assert.deepEqual(board.analogWrite.args[7], [ 12, 0 ]);
 
     assert.equal(await close(), null);
   });
