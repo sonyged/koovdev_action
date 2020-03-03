@@ -11,15 +11,15 @@
   "license": "SEE LICENSE in ./LICENSE",
   "dependencies": {
     "debug": "^2.6.6",
-    "firmata": "https://github.com/sonyged/firmata.js.git#1accd273e14df315439732193f585b08ab7731dc",
+    "firmata": "https://github.com/sonyged/firmata.js.git#d172dbefc2c241ccf660e7ae002a25cc76a101ee",
     "koovdev_error": "https://github.com/sonyged/koovdev_error.git#c2ba353f2bd4296a5a76de492968f5feba943df3"
   },
   "devDependencies": {
     "async": "^2.0.1",
     "device_proxy": "https://github.com/sonyged/device_proxy.git#565741bcc0d600d43596583e1c676c8d1a5bad12",
     "istanbul": "^0.4.5",
-    "koovdev_device": "https://github.com/sonyged/koovdev_device.git#c61d2940c0707783ab5b912d0d3b90902086e08a",
-    "koovble": "https://github.com/sonyged/koovble.git#889bdf822b3e546d1a47e57c1524afb7fce09fc3",
+    "koovdev_device": "https://github.com/sonyged/koovdev_device.git#4d1779918b24f11c0a2291744a4a6e234b083c34",
+    "koovble": "https://github.com/sonyged/koovble.git#78758cedc94884fa2cc290cb5628959ed7cd7173",
     "mocha": "^3.3.0",
     "noble": "https://github.com/sonyged/noble.git#4f89e9474b6986ebdff2f520c9bd9b247989ad35",
     "nodeunit": "^0.11.0",
