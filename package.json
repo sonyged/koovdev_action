@@ -11,7 +11,7 @@
   "license": "SEE LICENSE in ./LICENSE",
   "dependencies": {
     "debug": "^2.6.6",
-    "firmata": "https://github.com/sonyged/firmata.js.git#6dba395420b99e83b611cdaae4f11cd318dfd940",
+    "firmata": "https://github.com/sonyged/firmata.js.git#1487837302e0395d6f412d9d18e6bc5ba94fe1f2",
     "koovdev_error": "https://github.com/sonyged/koovdev_error.git#c2ba353f2bd4296a5a76de492968f5feba943df3"
   },
   "devDependencies": {
