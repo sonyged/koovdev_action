@@ -1,6 +1,6 @@
 {
   "name": "koovdev_action",
-  "version": "1.0.292",
+  "version": "1.0.296",
   "description": "firmata action management",
   "main": "koovdev_action.js",
   "scripts": {
@@ -11,7 +11,7 @@
   "license": "SEE LICENSE in ./LICENSE",
   "dependencies": {
     "debug": "^2.6.6",
-    "firmata": "https://github.com/sonyged/firmata.js.git#1accd273e14df315439732193f585b08ab7731dc",
+    "firmata": "https://github.com/sonyged/firmata.js.git#1487837302e0395d6f412d9d18e6bc5ba94fe1f2",
     "koovdev_error": "https://github.com/sonyged/koovdev_error.git#6a66a483edfa8c692d46cb7841097add69aa619c"
   },
   "devDependencies": {
@@ -19,12 +19,12 @@
     "device_proxy": "https://github.com/sonyged/device_proxy.git#1bd7356a1b3f2b50dea5e256f3778a01b0d8566b",
     "istanbul": "^0.4.5",
     "koovdev_device": "https://github.com/sonyged/koovdev_device.git#97b17dea4f7b44a3480350d806f37d2ecb6452fd",
-    "koovble": "https://github.com/sonyged/koovble.git#889bdf822b3e546d1a47e57c1524afb7fce09fc3",
+    "koovble": "https://github.com/sonyged/koovble.git#72ea099359fe8a0c3428f9d43561c4b9db13b9ec",
     "mocha": "^3.3.0",
     "noble": "https://github.com/sonyged/noble.git#4f89e9474b6986ebdff2f520c9bd9b247989ad35",
     "nodeunit": "^0.11.0",
     "rewire": "latest",
-    "serialport": "https://github.com/sonyged/node-serialport.git#71150b09874b2ed7be83b9c4ab9427c4544f31d6",
+    "serialport": "^8.0.5",
     "sinon": "latest",
     "should": "^11.2.1"
   }
