@@ -609,7 +609,7 @@ function koov_actions(board, action_timeout, selected_device) {
             this.action_queue.length === 0)
           return;
 
-        this.current_action = this.action_queue.pop();
+        this.current_action = this.action_queue.shift();
         const { block, arg, finish } = this.current_action;
         if (this.resetting) {
           debug('call finish: resetting');
@@ -1823,10 +1823,19 @@ function Action(opts)
   };
   this.on_close = on_close;
   this.terminate_device = (cb) => {
+    const callback = (err) => {
+      if (this.action) {
+        debug(
+          'terminate_device: clear current_action',
+          this.action.current_action);
+        this.action.current_action = null;
+      }
+      cb(err);
+    };
     if (!this.device)
-      return cb();
+      return callback();
     debug('terminating device');
-    this.device.terminate(cb);
+    this.device.terminate(callback);
   };
   this.open = function(name, open_opts) {
     debug('action: open', name);
