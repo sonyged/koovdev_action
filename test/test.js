@@ -84,7 +84,7 @@ const setup_action = () => {
 };
 
 describe('turn_led', () => {
-  it('should call this.terminate_device', async () => {
+  it('should work', async () => {
     const { action, board, open, close } = setup_action();
 
     assert.equal(await open('/dev/null'), null);
@@ -113,7 +113,7 @@ describe('turn_led', () => {
 });
 
 describe('dcmotor_control', () => {
-  it('should call this.terminate_device', async () => {
+  it('should work', async () => {
     const { action, board, open, close } = setup_action();
 
     assert.equal(await open('/dev/null'), null);
