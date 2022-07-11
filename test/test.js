@@ -27,6 +27,11 @@ describe('terminate_device with device', () => {
     ka.terminate_device(callback2);
     assert(callback.callCount === 2);
 
+    ka.action = { current_action: () => {} };
+    ka.terminate_device(callback);
+    assert(callback.callCount === 3);
+    assert(ka.action.current_action === null);
+
     done();
   });
 });
