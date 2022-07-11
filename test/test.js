@@ -16,15 +16,21 @@ describe('terminate_device without device', () => {
 
 describe('terminate_device with device', () => {
   it('should call callback', (done) => {
-    const terminate = sinon.spy();
-    const ka = require('../koovdev_action').action({ device: { terminate } });
-    const callback = () => {};
+    const ka = require('../koovdev_action').action({
+      device: { terminate: (cb) => cb(null)}});
+    const callback = sinon.spy();
     const callback2 = () => { callback(); };
 
+    assert(callback.callCount === 0);
     ka.terminate_device(callback);
-    assert(terminate.calledOnceWith(callback));
+    assert(callback.callCount === 1);
     ka.terminate_device(callback2);
-    assert(terminate.getCall(1).callback === callback2);
+    assert(callback.callCount === 2);
+
+    ka.action = { current_action: () => {} };
+    ka.terminate_device(callback);
+    assert(callback.callCount === 3);
+    assert(ka.action.current_action === null);
 
     done();
   });
@@ -83,7 +89,7 @@ const setup_action = () => {
 };
 
 describe('turn_led', () => {
-  it('should call this.terminate_device', async () => {
+  it('should work', async () => {
     const { action, board, open, close } = setup_action();
 
     assert.equal(await open('/dev/null'), null);
@@ -112,7 +118,7 @@ describe('turn_led', () => {
 });
 
 describe('dcmotor_control', () => {
-  it('should call this.terminate_device', async () => {
+  it('should work', async () => {
     const { action, board, open, close } = setup_action();
 
     assert.equal(await open('/dev/null'), null);
