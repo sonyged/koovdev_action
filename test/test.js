@@ -16,15 +16,16 @@ describe('terminate_device without device', () => {
 
 describe('terminate_device with device', () => {
   it('should call callback', (done) => {
-    const terminate = sinon.spy();
-    const ka = require('../koovdev_action').action({ device: { terminate } });
-    const callback = () => {};
+    const ka = require('../koovdev_action').action({
+      device: { terminate: (cb) => cb(null)}});
+    const callback = sinon.spy();
     const callback2 = () => { callback(); };
 
+    assert(callback.callCount === 0);
     ka.terminate_device(callback);
-    assert(terminate.calledOnceWith(callback));
+    assert(callback.callCount === 1);
     ka.terminate_device(callback2);
-    assert(terminate.getCall(1).callback === callback2);
+    assert(callback.callCount === 2);
 
     done();
   });
