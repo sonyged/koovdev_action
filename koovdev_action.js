@@ -529,9 +529,12 @@ function koov_actions(board, action_timeout, selected_device) {
     buzzer_off(board, pin);
   };
   const init_multiled = port => {
-    ['LED_R', 'LED_G', 'LED_B', 'LED_FET'].forEach(x => {
-      board.pinMode(KOOV_PORTS[x], board.MODES.OUTPUT);
-      board.digitalWrite(KOOV_PORTS[x], board.HIGH);
+    board.pinMode(KOOV_PORTS['LED_FET'], board.MODES.OUTPUT);
+    board.digitalWrite(KOOV_PORTS['LED_FET'], board.HIGH);
+    RGB_STATE.forEach(x => {
+      x.state = false;
+      board.pinMode(x.pin, board.MODES.OUTPUT);
+      board.digitalWrite(x.pin, board.LOW);
     });
   };
   const initializer = {
