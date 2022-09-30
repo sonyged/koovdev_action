@@ -21,7 +21,7 @@
     "koovdev_device": "https://github.com/sonyged/koovdev_device.git#bd83fd08e5225b311ea7dd1a49984c44d9386739",
     "koovble": "https://github.com/sonyged/koovble.git#72ea099359fe8a0c3428f9d43561c4b9db13b9ec",
     "mocha": "^3.3.0",
-    "noble": "https://github.com/sonyged/noble.git#4f89e9474b6986ebdff2f520c9bd9b247989ad35",
+    "noble": "https://github.com/sonyged/noble.git#43c373018ebe2413f5c1a36ebcc87398f05a158d",
     "nodeunit": "^0.11.0",
     "rewire": "latest",
     "serialport": "^8.0.5",
